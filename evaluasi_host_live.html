@@ -943,6 +943,7 @@ async function initApp() {
         </div>`;
       return;
     }
+    if (document.getElementById('main-app').style.display === 'block') return;
     document.getElementById('login-wall').style.display = 'none';
     document.getElementById('main-app').style.display = 'block';
     buildUI();
@@ -965,7 +966,9 @@ async function leaderLogin() {
 }
 
 sb.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_IN') initApp();
+  if (event === 'SIGNED_IN' && !document.getElementById('main-app').style.display.includes('block')) {
+    initApp();
+  }
 });
 
 initApp();
