@@ -430,6 +430,19 @@
 </style>
 </head>
 <body>
+<!-- Login Wall -->
+<div id="login-wall" style="display:none;min-height:100vh;align-items:center;justify-content:center;background:#f7f6f3;">
+  <div style="background:#fff;border:1px solid #e4e2dc;border-radius:12px;padding:2rem 2.5rem;width:100%;max-width:360px;text-align:center;">
+    <h2 style="font-size:18px;font-weight:600;margin-bottom:6px;color:#1a1917">Leader Login</h2>
+    <p style="font-size:13px;color:#6b6860;margin-bottom:1.5rem">Masukkan email leader untuk menerima magic link</p>
+    <input type="email" id="leader-email" placeholder="Email kamu" style="width:100%;padding:9px 12px;border:1px solid #d0cec6;border-radius:8px;font-size:13px;margin-bottom:10px;box-sizing:border-box;font-family:Inter,sans-serif;" />
+    <button id="login-btn" onclick="leaderLogin()" style="width:100%;padding:10px;background:#1a1917;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:Inter,sans-serif;">Kirim Magic Link</button>
+    <p id="login-msg" style="display:none;margin-top:12px;font-size:13px;color:#16a34a;"></p>
+  </div>
+</div>
+
+<!-- Main App -->
+<div id="main-app" style="display:none;">
 <div class="page">
 
   <div class="page-header">
@@ -437,7 +450,10 @@
       <h1>Evaluasi host — one-on-one</h1>
       <p>Scoring sheet untuk sesi coaching host live streaming</p>
     </div>
-    <span style="font-size:13px;font-weight:500;color:var(--text2)">Evaluasi Host</span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <span style="font-size:13px;font-weight:500;color:var(--text2)">Evaluasi Host</span>
+      <button onclick="sb.auth.signOut().then(()=>location.reload())" style="padding:5px 12px;border-radius:20px;border:1px solid #d0cec6;background:#fff;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;color:#6b6860;">Keluar</button>
+    </div>
   </div>
 
   <!-- Meta -->
@@ -759,8 +775,19 @@ async function saveSession() {
     notes: document.getElementById(`notes_${sec.id}`).value.trim(),
   }));
 
+  // Get host email from mapping
+  const HOST_EMAILS = {
+    'Sinta': 'cintaafandi@gmail.com',
+    'Indah': 'sitifaridah332@gmail.com',
+    'Salma': 'salamahsalma0712@gmail.com',
+    'Nadya': 'iklilunnadia12@gmail.com',
+    'Yaya': 'tiasetiawati30082006@gmail.com',
+    'Fira': 'syafirasiti143@gmail.com',
+  };
+
   const payload = {
     host, brand,
+    host_email: HOST_EMAILS[host] || null,
     evaluasi_ke: sesi || null,
     tanggal: tanggal || null,
     commitment: commitment || null,
@@ -900,8 +927,48 @@ function exportCSV() {
   a.click();
 }
 
-buildUI();
-fetchSessions();
+// ── Auth check for leader ──
+const LEADER_EMAIL = 'fajarzinfo@gmail.com';
+
+async function initApp() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    if (session.user.email !== LEADER_EMAIL) {
+      document.body.innerHTML = `
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;background:var(--bg,#f7f6f3)">
+          <div style="text-align:center;padding:2rem">
+            <p style="font-size:15px;color:#6b6860;margin-bottom:16px">Akun ini tidak memiliki akses leader.</p>
+            <button onclick="sb.auth.signOut().then(()=>location.reload())" style="padding:9px 18px;border-radius:8px;border:1px solid #d0cec6;background:#fff;cursor:pointer;font-size:13px">Keluar</button>
+          </div>
+        </div>`;
+      return;
+    }
+    document.getElementById('login-wall').style.display = 'none';
+    document.getElementById('main-app').style.display = 'block';
+    buildUI();
+    fetchSessions();
+  } else {
+    document.getElementById('login-wall').style.display = 'flex';
+    document.getElementById('main-app').style.display = 'none';
+  }
+}
+
+async function leaderLogin() {
+  const email = document.getElementById('leader-email').value.trim();
+  if (!email) { alert('Masukkan email dulu ya.'); return; }
+  if (email !== LEADER_EMAIL) { alert('Email tidak dikenali sebagai leader.'); return; }
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: 'https://fajarzinfo-byte.github.io/evaluasi-host-senja/evaluasi_host_live.html' } });
+  if (error) { alert('Error: ' + error.message); return; }
+  document.getElementById('login-msg').textContent = 'Magic link dikirim ke ' + email + ' — cek inbox kamu!';
+  document.getElementById('login-msg').style.display = 'block';
+  document.getElementById('login-btn').style.display = 'none';
+}
+
+sb.auth.onAuthStateChange((event, session) => {
+  if (event === 'SIGNED_IN') initApp();
+});
+
+initApp();
 </script>
 <div class="toast" id="toast"></div>
 <script>
@@ -914,5 +981,6 @@ function showToast(msg, type='info') {
   toastTimer = setTimeout(() => t.className = 'toast', 3000);
 }
 </script>
+</div></div>
 </body>
 </html>
