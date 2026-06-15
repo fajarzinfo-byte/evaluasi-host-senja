@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Evaluasi Host</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #f7f6f3; --surface: #ffffff; --surface2: #f2f1ee;
+    --border: #e4e2dc; --border2: #d0cec6;
+    --text: #1a1917; --text2: #6b6860; --text3: #a09e99;
+    --accent: #2563eb; --accent-bg: #eff4ff;
+    --good: #16a34a; --good-bg: #f0fdf4; --good-border: #bbf7d0;
+    --warn: #d97706; --warn-bg: #fffbeb; --warn-border: #fde68a;
+    --bad: #dc2626; --bad-bg: #fef2f2; --bad-border: #fecaca;
+    --radius: 10px; --radius-sm: 6px;
+  }
+  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+
+  /* Login */
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem 2.5rem; width: 100%; max-width: 380px; text-align: center; }
+  .login-card h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .login-card p { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; }
+  .login-card input { width: 100%; padding: 10px 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 10px; font-family: 'Inter', sans-serif; color: var(--text); outline: none; }
+  .login-card input:focus { border-color: var(--accent); }
+  .btn-full { width: 100%; padding: 10px; background: var(--text); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .success-msg { display: none; margin-top: 12px; font-size: 13px; color: var(--good); }
+
+  /* App */
+  .app-wrap { display: none; max-width: 900px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+  .page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+  .page-header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+  .page-header p { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  .btn { padding: 7px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--surface); font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; color: var(--text); }
+  .btn:hover { background: var(--surface2); }
+  .btn-accent { background: var(--text); color: #fff; border-color: var(--text); }
+  .btn-accent:hover { background: #333; }
+  .btn-logout { color: var(--text2); }
+
+  /* Summary stats */
+  .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; text-align: center; }
+  .stat-label { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+  .stat-value { font-size: 22px; font-weight: 600; color: var(--text); }
+  .stat-value.good { color: var(--good); }
+  .stat-value.warn { color: var(--warn); }
+  .stat-value.bad { color: var(--bad); }
+
+  /* Brand tabs */
+  .brand-tabs { display: flex; gap: 6px; margin-bottom: 1.5rem; flex-wrap: wrap; }
+  .tab { padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border2); background: var(--surface); font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; color: var(--text2); }
+  .tab.active { background: var(--text); color: #fff; border-color: var(--text); }
+
+  /* Host grid */
+  .host-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-bottom: 2rem; }
+  .host-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; cursor: pointer; transition: border-color .15s; }
+  .host-card:hover { border-color: var(--accent); }
+  .host-card-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .host-avatar { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 16px; color: #fff; flex-shrink: 0; }
+  .host-name { font-size: 15px; font-weight: 600; }
+  .host-brand-badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 10px; background: var(--accent-bg); color: var(--accent); margin-top: 2px; display: inline-block; }
+  .host-score { font-size: 22px; font-weight: 600; }
+  .host-score.good { color: var(--good); }
+  .host-score.warn { color: var(--warn); }
+  .host-score.bad { color: var(--bad); }
+  .host-score.none { color: var(--text3); font-size: 16px; }
+  .host-stats { display: flex; gap: 16px; }
+  .host-stat { font-size: 12px; color: var(--text3); }
+  .host-stat span { font-weight: 500; color: var(--text2); display: block; font-size: 13px; }
+  .trend-up { color: var(--good) !important; }
+  .trend-down { color: var(--bad) !important; }
+
+  /* Mini chart in card */
+  .mini-chart { margin-top: 12px; height: 50px; }
+
+  /* Month filter */
+  .filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+  .filter-row label { font-size: 13px; color: var(--text2); }
+  .filter-row select, .filter-row input { padding: 7px 10px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; font-family: 'Inter', sans-serif; color: var(--text); background: var(--surface); outline: none; }
+
+  /* Detail modal */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
+  .modal-overlay.open { display: flex; }
+  .modal { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 560px; max-height: 80vh; overflow-y: auto; }
+  .modal-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); }
+  .modal-title { font-size: 16px; font-weight: 600; }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--text2); padding: 4px; }
+  .modal-body { padding: 16px 20px; }
+  .eval-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .eval-row:last-child { border-bottom: none; }
+  .eval-row-date { font-size: 13px; color: var(--text2); }
+  .eval-row-score { font-size: 15px; font-weight: 600; }
+
+  .section-title { font-size: 15px; font-weight: 600; margin-bottom: 1rem; }
+  .empty { text-align: center; padding: 2rem 0; color: var(--text3); font-size: 13px; }
+
+  @media (max-width: 600px) {
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+    .host-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="login-wrap" id="login-section">
+  <div class="login-card">
+    <h1>Dashboard Leader</h1>
+    <p>Masukkan email leader untuk akses</p>
+    <input type="email" id="leader-email" placeholder="Email leader" />
+    <button class="btn-full" id="login-btn" onclick="leaderLogin()">Kirim Magic Link</button>
+    <p class="success-msg" id="login-msg"></p>
+  </div>
+</div>
+
+<div class="app-wrap" id="app-section">
+  <div class="page-header">
+    <div>
+      <h1>Dashboard Evaluasi Host</h1>
+      <p id="last-updated">Memuat data...</p>
+    </div>
+    <div class="header-actions">
+      <a href="https://tinyurl.com/leader-senja" style="text-decoration:none"><button class="btn">+ Input Evaluasi</button></a>
+      <button class="btn btn-accent" onclick="exportPDF()">Export PDF</button>
+      <button class="btn btn-logout" onclick="sb.auth.signOut().then(()=>location.reload())">Keluar</button>
+    </div>
+  </div>
+
+  <div class="summary-grid">
+    <div class="stat"><div class="stat-label">Total host</div><div class="stat-value" id="s-hosts">6</div></div>
+    <div class="stat"><div class="stat-label">Total evaluasi</div><div class="stat-value" id="s-evals">—</div></div>
+    <div class="stat"><div class="stat-label">Rata-rata tim</div><div class="stat-value" id="s-avg">—</div></div>
+    <div class="stat"><div class="stat-label">Perlu perhatian</div><div class="stat-value bad" id="s-attention">—</div></div>
+  </div>
+
+  <div class="filter-row">
+    <label>Periode:</label>
+    <select id="month-filter" onchange="renderDashboard()">
+      <option value="">Semua waktu</option>
+    </select>
+  </div>
+
+  <div class="brand-tabs">
+    <div class="tab active" onclick="filterBrand('', this)">Semua</div>
+    <div class="tab" onclick="filterBrand('Onebear', this)">Onebear</div>
+    <div class="tab" onclick="filterBrand('Supoe', this)">Supoe</div>
+    <div class="tab" onclick="filterBrand('Momso', this)">Momso</div>
+  </div>
+
+  <div class="host-grid" id="host-grid"></div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal" onclick="closeModal(event)">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title" id="modal-title"></span>
+      <button class="modal-close" onclick="document.getElementById('modal').classList.remove('open')">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL  = 'https://pwqozfqqaewjpnpkydpo.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_1VeUHXivMJkjqKGnAP4_vw_tr614ZcW';
+const LEADER_EMAIL  = 'fajarzinfo@gmail.com';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const HOST_LIST = [
+  { name: 'Sinta', brand: 'Onebear', email: 'cintaafandi@gmail.com',          color: '#e879f9' },
+  { name: 'Indah', brand: 'Onebear', email: 'sitifaridah332@gmail.com',        color: '#a855f7' },
+  { name: 'Salma', brand: 'Supoe',   email: 'salamahsalma0712@gmail.com',      color: '#3b82f6' },
+  { name: 'Nadya', brand: 'Supoe',   email: 'iklilunnadia12@gmail.com',        color: '#06b6d4' },
+  { name: 'Yaya',  brand: 'Momso',   email: 'tiasetiawati30082006@gmail.com',  color: '#f97316' },
+  { name: 'Fira',  brand: 'Momso',   email: 'syafirasiti143@gmail.com',        color: '#ef4444' },
+];
+
+let allData = [];
+let activeBrand = '';
+let miniCharts = {};
+
+async function leaderLogin() {
+  const email = document.getElementById('leader-email').value.trim();
+  if (email !== LEADER_EMAIL) { alert('Email ini tidak terdaftar sebagai leader.'); return; }
+  document.getElementById('login-btn').textContent = 'Mengirim...';
+  document.getElementById('login-btn').disabled = true;
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: 'https://fajarzinfo-byte.github.io/evaluasi-host-senja/dashboard.html' } });
+  if (error) { alert('Error: ' + error.message); return; }
+  const msg = document.getElementById('login-msg');
+  msg.textContent = 'Magic link dikirim ke ' + email + ' — cek inbox!';
+  msg.style.display = 'block';
+  document.getElementById('login-btn').style.display = 'none';
+}
+
+async function loadData() {
+  const { data, error } = await sb.from('evaluasi_host').select('*').order('created_at', { ascending: true });
+  if (error) { console.error(error); return; }
+  allData = data || [];
+  populateMonthFilter();
+  renderDashboard();
+  const now = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  document.getElementById('last-updated').textContent = 'Terakhir diperbarui: ' + now;
+}
+
+function populateMonthFilter() {
+  const months = [...new Set(allData.filter(d => d.tanggal).map(d => d.tanggal.slice(0, 7)))].sort().reverse();
+  const sel = document.getElementById('month-filter');
+  months.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m;
+    const [y, mo] = m.split('-');
+    opt.textContent = new Date(y, mo-1).toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+    sel.appendChild(opt);
+  });
+}
+
+function getFilteredData() {
+  const month = document.getElementById('month-filter').value;
+  return allData.filter(d => {
+    const brandOk = !activeBrand || d.brand === activeBrand;
+    const monthOk = !month || (d.tanggal && d.tanggal.startsWith(month));
+    return brandOk && monthOk;
+  });
+}
+
+function filterBrand(brand, el) {
+  activeBrand = brand;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderDashboard();
+}
+
+function renderDashboard() {
+  const filtered = getFilteredData();
+  const hosts = activeBrand ? HOST_LIST.filter(h => h.brand === activeBrand) : HOST_LIST;
+
+  // Summary stats
+  const allAvgs = filtered.map(d => parseFloat(d.avg)).filter(v => !isNaN(v));
+  const teamAvg = allAvgs.length ? (allAvgs.reduce((a,b)=>a+b,0)/allAvgs.length).toFixed(1) : '—';
+  document.getElementById('s-evals').textContent = filtered.length;
+  const avgEl = document.getElementById('s-avg');
+  avgEl.textContent = teamAvg;
+  avgEl.className = 'stat-value ' + (teamAvg !== '—' ? (parseFloat(teamAvg) >= 4 ? 'good' : parseFloat(teamAvg) >= 2.5 ? 'warn' : 'bad') : '');
+
+  // Attention: hosts with avg < 3
+  const attention = hosts.filter(h => {
+    const hData = filtered.filter(d => d.host === h.name);
+    if (!hData.length) return false;
+    const la = parseFloat(hData[hData.length-1].avg);
+    return la < 3;
+  }).length;
+  document.getElementById('s-attention').textContent = attention;
+
+  // Host grid
+  Object.values(miniCharts).forEach(c => c.destroy());
+  miniCharts = {};
+
+  const grid = document.getElementById('host-grid');
+  if (!hosts.length) { grid.innerHTML = '<p class="empty">Tidak ada host.</p>'; return; }
+
+  grid.innerHTML = hosts.map(h => {
+    const hData = filtered.filter(d => d.host === h.name);
+    const latest = hData.length ? hData[hData.length-1] : null;
+    const latestAvg = latest ? parseFloat(latest.avg) : null;
+    const cls = latestAvg !== null ? (latestAvg >= 4 ? 'good' : latestAvg >= 2.5 ? 'warn' : 'bad') : 'none';
+    const scoreText = latestAvg !== null ? latestAvg.toFixed(1) + '/5' : 'Belum ada';
+
+    let trend = '';
+    if (hData.length >= 2) {
+      const diff = parseFloat(hData[hData.length-1].avg) - parseFloat(hData[hData.length-2].avg);
+      if (diff > 0.05) trend = `<span class="trend-up">↑ +${diff.toFixed(1)}</span>`;
+      else if (diff < -0.05) trend = `<span class="trend-down">↓ ${diff.toFixed(1)}</span>`;
+      else trend = `→ Stabil`;
+    }
+
+    const lastEval = latest?.tanggal ? new Date(latest.tanggal + 'T00:00:00').toLocaleDateString('id-ID', {day:'numeric',month:'short'}) : '—';
+
+    return `<div class="host-card" onclick="showDetail('${h.name}')">
+      <div class="host-card-head">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div class="host-avatar" style="background:${h.color};width:32px;height:32px;font-size:13px">${h.name[0]}</div>
+            <div>
+              <div class="host-name">${h.name}</div>
+              <span class="host-brand-badge">${h.brand}</span>
+            </div>
+          </div>
+        </div>
+        <div class="host-score ${cls}">${scoreText}</div>
+      </div>
+      <div class="host-stats">
+        <div class="host-stat">Evaluasi<span>${hData.length}x</span></div>
+        <div class="host-stat">Tren<span>${trend || '—'}</span></div>
+        <div class="host-stat">Terakhir<span>${lastEval}</span></div>
+      </div>
+      ${hData.length > 1 ? `<div class="mini-chart"><canvas id="mini-${h.name}"></canvas></div>` : ''}
+    </div>`;
+  }).join('');
+
+  // Mini charts
+  hosts.forEach(h => {
+    const hData = filtered.filter(d => d.host === h.name);
+    if (hData.length > 1) {
+      const canvas = document.getElementById(`mini-${h.name}`);
+      if (canvas) {
+        miniCharts[h.name] = new Chart(canvas, {
+          type: 'line',
+          data: {
+            labels: hData.map((_, i) => i+1),
+            datasets: [{ data: hData.map(d => parseFloat(d.avg)), borderColor: h.color, borderWidth: 2, pointRadius: 2, tension: 0.3, fill: false }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { display: false, min: 0, max: 5 } } }
+        });
+      }
+    }
+  });
+}
+
+function showDetail(hostName) {
+  const hData = allData.filter(d => d.host === hostName).reverse();
+  const h = HOST_LIST.find(x => x.name === hostName);
+  document.getElementById('modal-title').textContent = hostName + ' — ' + (h?.brand || '');
+  document.getElementById('modal-body').innerHTML = !hData.length
+    ? '<p class="empty">Belum ada evaluasi.</p>'
+    : hData.map(ev => {
+        const avg = parseFloat(ev.avg);
+        const cls = avg >= 4 ? 'good' : avg >= 2.5 ? 'warn' : 'bad';
+        const tgl = ev.tanggal ? new Date(ev.tanggal + 'T00:00:00').toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'}) : '—';
+        const evalKe = ev.evaluasi_ke ? 'Evaluasi ke-' + ev.evaluasi_ke : tgl;
+        const secRows = (ev.sections||[]).map(sec => {
+          const vals = sec.scores.filter(v=>v>0);
+          const sa = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
+          return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border);color:var(--text2)"><span>${sec.title}</span><span style="font-weight:500;color:var(--text)">${sa}/5</span></div>`;
+        }).join('');
+        const targetHtml = ev.target ? `<div style="margin-top:8px;padding:8px;background:var(--warn-bg);border-radius:6px;font-size:12px;color:#b45309"><strong>Target:</strong> ${ev.target}</div>` : '';
+        const commitHtml = ev.commitment ? `<div style="margin-top:6px;padding:8px;background:var(--surface2);border-radius:6px;font-size:12px;color:var(--text2)"><strong>Komitmen:</strong> ${ev.commitment}</div>` : '';
+        return `<div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+            <div><div style="font-weight:500">${evalKe}</div><div style="font-size:12px;color:var(--text3)">${tgl}</div></div>
+            <div style="font-size:18px;font-weight:600" class="${cls}">${avg.toFixed(1)}/5</div>
+          </div>
+          ${secRows}${targetHtml}${commitHtml}
+        </div>`;
+      }).join('');
+  document.getElementById('modal').classList.add('open');
+}
+
+function closeModal(e) { if (e.target === document.getElementById('modal')) document.getElementById('modal').classList.remove('open'); }
+
+function exportPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const month = document.getElementById('month-filter').value;
+  const monthLabel = month ? new Date(month + '-01').toLocaleDateString('id-ID', { month: 'long', year: 'numeric' }) : 'Semua Waktu';
+  const filtered = getFilteredData();
+
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Laporan Evaluasi Host', 14, 20);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100);
+  doc.text('Periode: ' + monthLabel, 14, 28);
+  doc.text('Digenerate: ' + new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }), 14, 34);
+  doc.setTextColor(0);
+
+  // Summary table per host
+  const rows = HOST_LIST.map(h => {
+    const hData = filtered.filter(d => d.host === h.name);
+    if (!hData.length) return [h.name, h.brand, '—', '—', '—', '—'];
+    const avgs = hData.map(d => parseFloat(d.avg));
+    const latest = avgs[avgs.length-1];
+    const best = Math.max(...avgs);
+    const trend = avgs.length >= 2 ? (avgs[avgs.length-1] - avgs[avgs.length-2]).toFixed(1) : '—';
+    const verdict = latest >= 4 ? 'Sangat Baik' : latest >= 3 ? 'Cukup Baik' : 'Perlu Improvement';
+    return [h.name, h.brand, hData.length, latest.toFixed(1) + '/5', best.toFixed(1) + '/5', verdict];
+  });
+
+  doc.autoTable({
+    startY: 42,
+    head: [['Host', 'Brand', 'Jml Evaluasi', 'Skor Terkini', 'Skor Terbaik', 'Status']],
+    body: rows,
+    styles: { fontSize: 10, cellPadding: 4 },
+    headStyles: { fillColor: [26, 25, 23], textColor: 255, fontStyle: 'bold' },
+    alternateRowStyles: { fillColor: [247, 246, 243] },
+  });
+
+  // Detail per host
+  let y = doc.lastAutoTable.finalY + 14;
+  HOST_LIST.forEach(h => {
+    const hData = filtered.filter(d => d.host === h.name);
+    if (!hData.length) return;
+
+    if (y > 240) { doc.addPage(); y = 20; }
+
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(h.name + ' (' + h.brand + ')', 14, y);
+    y += 6;
+
+    const detailRows = hData.reverse().map(ev => {
+      const tgl = ev.tanggal ? new Date(ev.tanggal + 'T00:00:00').toLocaleDateString('id-ID') : '—';
+      const evalKe = ev.evaluasi_ke ? 'Ke-' + ev.evaluasi_ke : '—';
+      const target = ev.target || '—';
+      return [evalKe, tgl, parseFloat(ev.avg).toFixed(1) + '/5', target.length > 40 ? target.slice(0,40) + '...' : target];
+    });
+
+    doc.autoTable({
+      startY: y,
+      head: [['Evaluasi', 'Tanggal', 'Skor', 'Target']],
+      body: detailRows,
+      styles: { fontSize: 9, cellPadding: 3 },
+      headStyles: { fillColor: [80, 80, 80], textColor: 255 },
+      margin: { left: 14 },
+    });
+    y = doc.lastAutoTable.finalY + 10;
+  });
+
+  const filename = `laporan_evaluasi_host_${month || 'semua'}_${new Date().toISOString().slice(0,10)}.pdf`;
+  doc.save(filename);
+}
+
+async function initApp() {
+  const { data: { session } } = await sb.auth.getSession();
+  if (session) {
+    if (session.user.email !== LEADER_EMAIL) {
+      alert('Akun ini tidak memiliki akses leader.');
+      await sb.auth.signOut();
+      return;
+    }
+    document.getElementById('login-section').style.display = 'none';
+    document.getElementById('app-section').style.display = 'block';
+    await loadData();
+  } else {
+    document.getElementById('login-section').style.display = 'flex';
+  }
+}
+
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session && document.getElementById('app-section').style.display !== 'block') {
+    initApp();
+  }
+});
+
+initApp();
+</script>
+</body>
+</html>

@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hasil Evaluasi — Host</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -19,7 +20,6 @@
   }
   body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
 
-  /* Login */
   .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
   .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem 2.5rem; width: 100%; max-width: 380px; text-align: center; }
   .login-card h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
@@ -30,14 +30,12 @@
   .btn-primary:hover { background: #333; }
   .success-msg { display: none; margin-top: 12px; font-size: 13px; color: var(--good); line-height: 1.5; }
 
-  /* App */
   .app-wrap { display: none; max-width: 680px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
   .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
-  .app-header-left h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
-  .app-header-left p { font-size: 13px; color: var(--text2); margin-top: 2px; }
+  .app-header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
+  .app-header p { font-size: 13px; color: var(--text2); margin-top: 2px; }
   .btn-logout { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border2); background: var(--surface); font-size: 12px; cursor: pointer; font-family: 'Inter', sans-serif; color: var(--text2); }
 
-  /* Stats */
   .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
   .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; text-align: center; }
   .stat-label { font-size: 11px; font-weight: 500; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
@@ -46,7 +44,28 @@
   .stat-value.warn { color: var(--warn); }
   .stat-value.bad { color: var(--bad); }
 
-  /* History */
+  /* Target box */
+  .target-box { background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 1.5rem; }
+  .target-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--warn); margin-bottom: 6px; }
+  .target-text { font-size: 13px; color: var(--text); margin-bottom: 10px; }
+  .btn-ack { padding: 7px 16px; border-radius: var(--radius-sm); border: 1px solid var(--warn-border); background: var(--surface); font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; color: var(--warn); }
+  .btn-ack:hover { background: var(--warn-bg); }
+  .ack-done { font-size: 12px; color: var(--good); font-weight: 500; }
+
+  /* Chart */
+  .chart-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 1.5rem; }
+  .chart-title { font-size: 13px; font-weight: 500; margin-bottom: 14px; }
+  .chart-wrap { height: 180px; position: relative; }
+
+  /* Progress bars */
+  .progress-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 1.5rem; }
+  .progress-title { font-size: 13px; font-weight: 500; margin-bottom: 12px; }
+  .progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .progress-label { font-size: 12px; color: var(--text2); width: 140px; flex-shrink: 0; }
+  .progress-bar-wrap { flex: 1; height: 6px; background: var(--surface2); border-radius: 10px; overflow: hidden; }
+  .progress-bar { height: 100%; border-radius: 10px; background: var(--accent); }
+  .progress-val { font-size: 12px; font-weight: 500; width: 30px; text-align: right; }
+
   .section-title { font-size: 15px; font-weight: 600; margin-bottom: 1rem; }
   .eval-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 10px; overflow: hidden; }
   .eval-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; cursor: pointer; }
@@ -59,39 +78,26 @@
   .eval-score.bad { color: var(--bad); }
   .eval-body { display: none; border-top: 1px solid var(--border); padding: 14px 16px; }
   .eval-body.open { display: block; }
-
-  /* Section rows */
-  .sec-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .sec-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
   .sec-row:last-child { border-bottom: none; }
   .sec-name { color: var(--text2); }
-  .sec-avg { font-weight: 500; }
   .verdict-box { border-radius: var(--radius-sm); padding: 10px 14px; margin-top: 12px; font-size: 13px; }
   .verdict-box.good { background: var(--good-bg); border: 1px solid var(--good-border); color: #15803d; }
   .verdict-box.warn { background: var(--warn-bg); border: 1px solid var(--warn-border); color: #b45309; }
   .verdict-box.bad { background: var(--bad-bg); border: 1px solid var(--bad-border); color: #b91c1c; }
-  .commitment-box { margin-top: 10px; padding: 10px 14px; background: var(--surface2); border-radius: var(--radius-sm); font-size: 13px; color: var(--text2); }
-  .commitment-box strong { color: var(--text); display: block; margin-bottom: 4px; }
-
-  /* Progress */
-  .progress-section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 1.5rem; }
-  .progress-title { font-size: 13px; font-weight: 500; margin-bottom: 12px; }
-  .progress-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .progress-label { font-size: 12px; color: var(--text2); width: 130px; flex-shrink: 0; }
-  .progress-bar-wrap { flex: 1; height: 6px; background: var(--surface2); border-radius: 10px; overflow: hidden; }
-  .progress-bar { height: 100%; border-radius: 10px; background: var(--accent); transition: width .3s; }
-  .progress-val { font-size: 12px; font-weight: 500; width: 30px; text-align: right; }
-
+  .commitment-note { margin-top: 10px; padding: 10px 14px; background: var(--surface2); border-radius: var(--radius-sm); font-size: 13px; color: var(--text2); }
+  .commitment-note strong { color: var(--text); display: block; margin-bottom: 3px; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
   .empty { text-align: center; padding: 3rem 0; color: var(--text3); font-size: 13px; }
 
   @media (max-width: 480px) {
     .stats-grid { grid-template-columns: 1fr 1fr; }
     .login-card { padding: 1.5rem; }
+    .progress-label { width: 100px; font-size: 11px; }
   }
 </style>
 </head>
 <body>
 
-<!-- Login -->
 <div class="login-wrap" id="login-section">
   <div class="login-card">
     <h1>Hasil Evaluasimu</h1>
@@ -102,10 +108,9 @@
   </div>
 </div>
 
-<!-- App -->
 <div class="app-wrap" id="app-section">
   <div class="app-header">
-    <div class="app-header-left">
+    <div>
       <h1 id="host-greeting">Halo!</h1>
       <p id="host-brand"></p>
     </div>
@@ -113,22 +118,24 @@
   </div>
 
   <div class="stats-grid">
-    <div class="stat">
-      <div class="stat-label">Total evaluasi</div>
-      <div class="stat-value" id="stat-total">—</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Rata-rata terkini</div>
-      <div class="stat-value" id="stat-latest">—</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Tren</div>
-      <div class="stat-value" id="stat-trend">—</div>
-    </div>
+    <div class="stat"><div class="stat-label">Total evaluasi</div><div class="stat-value" id="stat-total">—</div></div>
+    <div class="stat"><div class="stat-label">Skor terkini</div><div class="stat-value" id="stat-latest">—</div></div>
+    <div class="stat"><div class="stat-label">Tren</div><div class="stat-value" id="stat-trend">—</div></div>
   </div>
 
-  <div class="progress-section" id="progress-section" style="display:none">
-    <div class="progress-title">Perkembangan per area</div>
+  <div id="target-section" style="display:none" class="target-box">
+    <div class="target-label">🎯 Target dari leader</div>
+    <div class="target-text" id="target-text"></div>
+    <div id="ack-area"></div>
+  </div>
+
+  <div class="chart-card" id="chart-card" style="display:none">
+    <div class="chart-title">Perkembangan skor evaluasi</div>
+    <div class="chart-wrap"><canvas id="progress-chart"></canvas></div>
+  </div>
+
+  <div class="progress-card" id="progress-card" style="display:none">
+    <div class="progress-title">Skor per area (evaluasi terkini)</div>
     <div id="progress-bars"></div>
   </div>
 
@@ -151,28 +158,18 @@ const HOST_MAP = {
   'syafirasiti143@gmail.com':       { name: 'Fira',  brand: 'Momso'   },
 };
 
+let chartInstance = null;
+
 async function sendMagicLink() {
   const email = document.getElementById('host-email-input').value.trim().toLowerCase();
   if (!email) { alert('Masukkan email dulu ya.'); return; }
   if (!HOST_MAP[email]) { alert('Email ini tidak terdaftar sebagai host.'); return; }
-
   document.getElementById('send-btn').textContent = 'Mengirim...';
   document.getElementById('send-btn').disabled = true;
-
-  const { error } = await sb.auth.signInWithOtp({
-    email,
-    options: { emailRedirectTo: 'https://fajarzinfo-byte.github.io/evaluasi-host-senja/host.html' }
-  });
-
-  if (error) {
-    alert('Error: ' + error.message);
-    document.getElementById('send-btn').textContent = 'Kirim Link Akses';
-    document.getElementById('send-btn').disabled = false;
-    return;
-  }
-
+  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: 'https://fajarzinfo-byte.github.io/evaluasi-host-senja/host.html' } });
+  if (error) { alert('Error: ' + error.message); document.getElementById('send-btn').textContent = 'Kirim Link Akses'; document.getElementById('send-btn').disabled = false; return; }
   const msg = document.getElementById('success-msg');
-  msg.textContent = 'Link akses sudah dikirim ke ' + email + ' — cek inbox atau folder spam kamu ya!';
+  msg.textContent = 'Link akses dikirim ke ' + email + ' — cek inbox atau folder spam ya!';
   msg.style.display = 'block';
   document.getElementById('send-btn').style.display = 'none';
 }
@@ -186,117 +183,128 @@ async function loadHostData(email) {
   document.getElementById('host-greeting').textContent = 'Halo, ' + hostInfo.name + '!';
   document.getElementById('host-brand').textContent = 'Brand: ' + hostInfo.brand;
 
-  const { data, error } = await sb.from('evaluasi_host')
-    .select('*')
-    .eq('host_email', email)
-    .order('created_at', { ascending: false });
+  const { data, error } = await sb.from('evaluasi_host').select('*').eq('host_email', email).order('created_at', { ascending: true });
+  if (error || !data || !data.length) { document.getElementById('stat-total').textContent = '0'; return; }
 
-  if (error || !data.length) {
-    document.getElementById('stat-total').textContent = '0';
-    return;
-  }
-
-  // Stats
-  const latest = data[0];
+  const latest = data[data.length - 1];
   const latestAvg = parseFloat(latest.avg);
   const cls = latestAvg >= 4 ? 'good' : latestAvg >= 2.5 ? 'warn' : 'bad';
 
   document.getElementById('stat-total').textContent = data.length;
-  document.getElementById('stat-latest').textContent = latestAvg.toFixed(1);
-  document.getElementById('stat-latest').className = 'stat-value ' + cls;
+  const latestEl = document.getElementById('stat-latest');
+  latestEl.textContent = latestAvg.toFixed(1);
+  latestEl.className = 'stat-value ' + cls;
 
-  // Trend
   if (data.length >= 2) {
-    const prev = parseFloat(data[1].avg);
+    const prev = parseFloat(data[data.length - 2].avg);
     const diff = latestAvg - prev;
     const trendEl = document.getElementById('stat-trend');
-    if (diff > 0) { trendEl.textContent = '↑ +' + diff.toFixed(1); trendEl.className = 'stat-value good'; }
-    else if (diff < 0) { trendEl.textContent = '↓ ' + diff.toFixed(1); trendEl.className = 'stat-value bad'; }
+    if (diff > 0.05) { trendEl.textContent = '↑ +' + diff.toFixed(1); trendEl.className = 'stat-value good'; }
+    else if (diff < -0.05) { trendEl.textContent = '↓ ' + diff.toFixed(1); trendEl.className = 'stat-value bad'; }
     else { trendEl.textContent = '→ Stabil'; trendEl.className = 'stat-value'; }
-  } else {
-    document.getElementById('stat-trend').textContent = '—';
   }
 
-  // Progress bars (from latest eval)
+  // Target from latest eval
+  if (latest.target && !latest.target_acknowledged) {
+    document.getElementById('target-section').style.display = 'block';
+    document.getElementById('target-text').textContent = latest.target;
+    document.getElementById('ack-area').innerHTML = `<button class="btn-ack" onclick="acknowledgeTarget(${latest.id})">✓ Saya mengerti dan akan berusaha mencapai ini</button>`;
+  } else if (latest.target && latest.target_acknowledged) {
+    document.getElementById('target-section').style.display = 'block';
+    document.getElementById('target-text').textContent = latest.target;
+    document.getElementById('ack-area').innerHTML = `<span class="ack-done">✓ Sudah dikonfirmasi</span>`;
+  }
+
+  // Progress chart
+  if (data.length > 1) {
+    document.getElementById('chart-card').style.display = 'block';
+    const labels = data.map((d, i) => d.evaluasi_ke ? 'Evaluasi ' + d.evaluasi_ke : 'Eval ' + (i+1));
+    const scores = data.map(d => parseFloat(d.avg));
+    if (chartInstance) chartInstance.destroy();
+    chartInstance = new Chart(document.getElementById('progress-chart'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Rata-rata',
+          data: scores,
+          borderColor: '#2563eb',
+          backgroundColor: 'rgba(37,99,235,0.08)',
+          tension: 0.3,
+          pointBackgroundColor: '#2563eb',
+          pointRadius: 5,
+          fill: true,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { min: 0, max: 5, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f2f1ee' } },
+          x: { ticks: { font: { size: 11 } }, grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  // Progress bars (latest)
   if (latest.sections) {
-    document.getElementById('progress-section').style.display = 'block';
-    const bars = latest.sections.map(sec => {
+    document.getElementById('progress-card').style.display = 'block';
+    document.getElementById('progress-bars').innerHTML = latest.sections.map(sec => {
       const vals = sec.scores.filter(v => v > 0);
       const avg = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
       const pct = Math.round(avg / 5 * 100);
+      const barColor = avg >= 4 ? '#16a34a' : avg >= 2.5 ? '#d97706' : '#dc2626';
       return `<div class="progress-row">
         <span class="progress-label">${sec.title}</span>
-        <div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%"></div></div>
+        <div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%;background:${barColor}"></div></div>
         <span class="progress-val">${avg.toFixed(1)}</span>
       </div>`;
     }).join('');
-    document.getElementById('progress-bars').innerHTML = bars;
   }
 
-  // Eval list
-  const list = data.map((ev, idx) => {
+  // Eval list (newest first)
+  const reversed = [...data].reverse();
+  document.getElementById('eval-list').innerHTML = reversed.map((ev, idx) => {
     const avg = parseFloat(ev.avg);
     const ecls = avg >= 4 ? 'good' : avg >= 2.5 ? 'warn' : 'bad';
     const tgl = ev.tanggal ? new Date(ev.tanggal + 'T00:00:00').toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'}) : '—';
     const evalKe = ev.evaluasi_ke ? 'Evaluasi ke-' + ev.evaluasi_ke : 'Evaluasi #' + (data.length - idx);
-
-    const verdict = avg >= 4
-      ? 'Performa sangat baik! Pertahankan konsistensi ini.'
-      : avg >= 3
-      ? 'Performa cukup baik, ada beberapa area yang bisa ditingkatkan lagi.'
-      : 'Masih perlu banyak improvement — yuk fokus ke poin-poin yang skornya rendah dulu.';
-
-    const secRows = (ev.sections || []).map(sec => {
-      const vals = sec.scores.filter(v => v > 0);
-      const secAvg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
-      return `<div class="sec-row"><span class="sec-name">${sec.title}</span><span class="sec-avg">${secAvg}/5</span></div>`;
+    const verdict = avg >= 4 ? 'Performa sangat baik! Pertahankan konsistensi ini.' : avg >= 3 ? 'Performa cukup baik, ada beberapa area yang bisa ditingkatkan.' : 'Masih perlu improvement — yuk fokus ke poin yang skornya rendah dulu.';
+    const secRows = (ev.sections||[]).map(sec => {
+      const vals = sec.scores.filter(v=>v>0);
+      const sa = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
+      return `<div class="sec-row"><span class="sec-name">${sec.title}</span><span>${sa}/5</span></div>`;
     }).join('');
-
-    const commitment = ev.commitment
-      ? `<div class="commitment-box"><strong>Komitmen kamu:</strong>${ev.commitment}</div>`
-      : '';
-
+    const commitHtml = ev.commitment ? `<div class="commitment-note"><strong>Komitmen kamu</strong>${ev.commitment}</div>` : '';
+    const targetHtml = ev.target ? `<div class="commitment-note" style="background:var(--warn-bg);border:1px solid var(--warn-border)"><strong style="color:var(--warn)">Target dari leader</strong>${ev.target}</div>` : '';
     return `<div class="eval-card">
-      <div class="eval-head" onclick="toggleEval(this)">
-        <div>
-          <div class="eval-title">${evalKe}</div>
-          <div class="eval-meta">${tgl}</div>
-        </div>
+      <div class="eval-head" onclick="this.nextElementSibling.classList.toggle('open')">
+        <div><div class="eval-title">${evalKe}</div><div class="eval-meta">${tgl}</div></div>
         <div class="eval-score ${ecls}">${avg.toFixed(1)}/5</div>
       </div>
-      <div class="eval-body">
-        ${secRows}
-        <div class="verdict-box ${ecls}" style="margin-top:12px">${verdict}</div>
-        ${commitment}
-      </div>
+      <div class="eval-body">${secRows}<div class="verdict-box ${ecls}">${verdict}</div>${targetHtml}${commitHtml}</div>
     </div>`;
   }).join('');
-
-  document.getElementById('eval-list').innerHTML = list;
 }
 
-function toggleEval(el) {
-  const body = el.nextElementSibling;
-  body.classList.toggle('open');
+async function acknowledgeTarget(id) {
+  const { error } = await sb.from('evaluasi_host').update({ target_acknowledged: true }).eq('id', id);
+  if (!error) {
+    document.getElementById('ack-area').innerHTML = `<span class="ack-done">✓ Sudah dikonfirmasi</span>`;
+  }
 }
 
-async function logout() {
-  await sb.auth.signOut();
-  location.reload();
-}
+async function logout() { await sb.auth.signOut(); location.reload(); }
 
-// Init
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
-  if (session) {
-    loadHostData(session.user.email.toLowerCase());
-  }
+  if (session) loadHostData(session.user.email.toLowerCase());
 }
 
 sb.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_IN' && session) {
-    loadHostData(session.user.email.toLowerCase());
-  }
+  if (event === 'SIGNED_IN' && session) loadHostData(session.user.email.toLowerCase());
 });
 
 init();
