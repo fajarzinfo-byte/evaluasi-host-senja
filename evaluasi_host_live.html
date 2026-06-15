@@ -557,7 +557,6 @@
 const SUPABASE_URL  = 'https://pwqozfqqaewjpnpkydpo.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_1VeUHXivMJkjqKGnAP4_vw_tr614ZcW';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
-const RESEND_API_KEY = 're_49fb5N9F_JKLfRPgrrAvwEGuLZGkrwqaA';
 const LEADER_LINK = 'https://tinyurl.com/leader-senja';
 const HOST_LINK = 'https://tinyurl.com/host-senja';
 
@@ -821,11 +820,13 @@ async function saveSession() {
     const verdict = avg >= 4 ? 'Sangat Baik' : avg >= 3 ? 'Cukup Baik' : 'Perlu Improvement';
     const targetText = target ? `<p style="margin:12px 0 4px;font-weight:600">Target dari leader:</p><p style="background:#fffbeb;padding:10px;border-radius:6px;border-left:3px solid #f59e0b">${target}</p>` : '';
     try {
-      await fetch('https://api.resend.com/emails', {
+      await fetch('https://pwqozfqqaewjpnpkydpo.supabase.co/functions/v1/send-email', {
         method: 'POST',
-        headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${SUPABASE_ANON}`,
+        },
         body: JSON.stringify({
-          from: 'Evaluasi Host <onboarding@resend.dev>',
           to: [hostEmail],
           subject: `Hasil evaluasi kamu sudah tersedia — ${tgl}`,
           html: `<div style="font-family:Inter,sans-serif;max-width:480px;margin:0 auto;padding:24px">
