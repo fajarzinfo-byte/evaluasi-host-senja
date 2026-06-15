@@ -1,0 +1,918 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Evaluasi Host Live — Scoring Sheet</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --surface2: #f2f1ee;
+    --border: #e4e2dc;
+    --border2: #d0cec6;
+    --text: #1a1917;
+    --text2: #6b6860;
+    --text3: #a09e99;
+    --accent: #2563eb;
+    --accent-bg: #eff4ff;
+    --good: #16a34a;
+    --good-bg: #f0fdf4;
+    --good-border: #bbf7d0;
+    --warn: #d97706;
+    --warn-bg: #fffbeb;
+    --warn-border: #fde68a;
+    --bad: #dc2626;
+    --bad-bg: #fef2f2;
+    --bad-border: #fecaca;
+    --star-on: #f59e0b;
+    --star-off: #e5e3de;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  .page {
+    max-width: 780px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* ── Header ── */
+  .page-header {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .page-header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .page-header p {
+    font-size: 13px;
+    color: var(--text2);
+    margin-top: 3px;
+  }
+  .header-badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 4px 10px;
+    background: var(--accent-bg);
+    color: var(--accent);
+    border-radius: 20px;
+    letter-spacing: .02em;
+  }
+
+  /* ── Meta fields ── */
+  .meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+  .field label {
+    display: block;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 5px;
+  }
+  .field input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    outline: none;
+    transition: border-color .15s;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .field input::placeholder { color: var(--text3); }
+
+  /* ── Section cards ── */
+  .section-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px 12px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .section-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+  .section-avg {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text3);
+    min-width: 48px;
+    text-align: right;
+  }
+  .section-avg.filled { color: var(--text); }
+
+  .item-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+  .item-row:last-of-type { border-bottom: none; }
+  .item-label {
+    flex: 1;
+    font-size: 13px;
+    color: var(--text);
+    line-height: 1.5;
+  }
+  .stars {
+    display: flex;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+  .star {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--star-off);
+    background: var(--star-off);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    color: #b0ae a8;
+    transition: all .1s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text3);
+    font-family: 'Inter', sans-serif;
+  }
+  .star:hover { border-color: var(--star-on); background: #fef3c7; color: var(--star-on); }
+  .star.on { background: var(--star-on); border-color: var(--star-on); color: #fff; }
+
+  .section-notes {
+    padding: 10px 16px 12px;
+    border-top: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .section-notes textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    color: var(--text2);
+    background: var(--bg);
+    resize: none;
+    height: 52px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .section-notes textarea:focus { border-color: var(--accent); }
+  .section-notes textarea::placeholder { color: var(--text3); }
+
+  /* ── Summary bar ── */
+  .summary-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 1.5rem 0 1rem;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    text-align: center;
+  }
+  .stat-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 6px;
+  }
+  .stat-value {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .stat-value.good { color: var(--good); }
+  .stat-value.warn { color: var(--warn); }
+  .stat-value.bad { color: var(--bad); }
+
+  /* ── Verdict ── */
+  .verdict {
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 1rem;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .verdict.good { background: var(--good-bg); border-color: var(--good-border); }
+  .verdict.warn { background: var(--warn-bg); border-color: var(--warn-border); }
+  .verdict.bad  { background: var(--bad-bg);  border-color: var(--bad-border); }
+  .verdict-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-bottom: 5px;
+    color: var(--text3);
+  }
+  .verdict.good .verdict-label { color: var(--good); }
+  .verdict.warn .verdict-label { color: var(--warn); }
+  .verdict.bad  .verdict-label { color: var(--bad); }
+  .verdict-text { font-size: 13px; color: var(--text); line-height: 1.6; }
+
+  /* ── Commitment ── */
+  .commitment-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 1.5rem;
+  }
+  .commitment-box label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text2);
+    margin-bottom: 8px;
+  }
+  .commitment-box textarea {
+    width: 100%;
+    border: 1px solid var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 10px 12px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    background: var(--bg);
+    resize: none;
+    height: 72px;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .commitment-box textarea:focus { border-color: var(--accent); }
+  .commitment-box textarea::placeholder { color: var(--text3); }
+
+  /* ── Buttons ── */
+  .btn-row {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .btn {
+    padding: 9px 18px;
+    border-radius: var(--radius-sm);
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border2);
+    background: var(--surface);
+    color: var(--text);
+    transition: background .12s, border-color .12s;
+  }
+  .btn:hover { background: var(--surface2); }
+  .btn-primary {
+    background: var(--text);
+    color: #fff;
+    border-color: var(--text);
+  }
+  .btn-primary:hover { background: #333; }
+  .btn-danger {
+    color: var(--bad);
+    border-color: var(--bad-border);
+  }
+  .btn-danger:hover { background: var(--bad-bg); }
+
+  /* ── History panel ── */
+  .history-section {
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+  }
+  .history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  .history-header h2 {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .history-empty {
+    font-size: 13px;
+    color: var(--text3);
+    text-align: center;
+    padding: 2rem 0;
+  }
+  .history-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .history-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .history-dot.good { background: var(--good); }
+  .history-dot.warn { background: var(--warn); }
+  .history-dot.bad  { background: var(--bad); }
+  .history-info { flex: 1; }
+  .history-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .history-meta { font-size: 12px; color: var(--text3); margin-top: 1px; }
+  .history-score {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    text-align: right;
+  }
+  .history-score small { font-size: 11px; font-weight: 400; color: var(--text3); }
+  .history-actions { display: flex; gap: 6px; }
+  .btn-sm {
+    padding: 5px 10px;
+    font-size: 11px;
+    border-radius: 5px;
+    border: 1px solid var(--border2);
+    background: var(--surface2);
+    cursor: pointer;
+    font-family: 'Inter', sans-serif;
+    font-weight: 500;
+    color: var(--text2);
+    transition: background .1s;
+  }
+  .btn-sm:hover { background: var(--border); }
+  .btn-sm.del { color: var(--bad); border-color: var(--bad-border); }
+  .btn-sm.del:hover { background: var(--bad-bg); }
+
+
+  .toast {
+    position: fixed; bottom: 24px; right: 24px;
+    padding: 12px 18px; border-radius: var(--radius);
+    font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text);
+    box-shadow: 0 4px 16px rgba(0,0,0,.08);
+    z-index: 9999;
+    opacity: 0; transform: translateY(8px);
+    transition: opacity .2s, transform .2s;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.success { background: var(--good-bg); border-color: var(--good-border); color: var(--good); }
+  .toast.error   { background: var(--bad-bg);  border-color: var(--bad-border);  color: var(--bad); }
+  .toast.info    { background: var(--accent-bg); border-color: #bfdbfe; color: var(--accent); }
+  /* ── Print ── */
+  @media print {
+    body { background: white; font-size: 12px; }
+    .btn-row, .history-section { display: none; }
+    .page { padding: 1rem; }
+    .section-card, .stat, .verdict, .commitment-box { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="page-header">
+    <div>
+      <h1>Evaluasi host — one-on-one</h1>
+      <p>Scoring sheet untuk sesi coaching host live streaming</p>
+    </div>
+    <span style="font-size:13px;font-weight:500;color:var(--text2)">Evaluasi Host</span>
+  </div>
+
+  <!-- Meta -->
+  <div class="meta-grid">
+    <div class="field">
+      <label>Brand</label>
+      <select id="brand" onchange="updateHostOptions()" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);font-family:Inter,sans-serif;font-size:13px;color:var(--text);outline:none;">
+        <option value="">Pilih brand</option>
+        <option value="Onebear">Onebear</option>
+        <option value="Supoe">Supoe</option>
+        <option value="Momso">Momso</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Nama host</label>
+      <select id="host-name" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);font-family:Inter,sans-serif;font-size:13px;color:var(--text);outline:none;">
+        <option value="">Pilih brand dulu</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Evaluasi ke-</label>
+      <input type="text" id="sesi" placeholder="Contoh: 3" />
+    </div>
+    <div class="field">
+      <label>Tanggal</label>
+      <input type="date" id="tanggal" />
+    </div>
+  </div>
+
+  <!-- Sections -->
+  <div id="sections-container"></div>
+
+  <!-- Summary -->
+  <div class="summary-bar">
+    <div class="stat">
+      <div class="stat-label">Skor total</div>
+      <div class="stat-value" id="total-score">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Rata-rata</div>
+      <div class="stat-value" id="avg-score">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Poin terisi</div>
+      <div class="stat-value" id="filled-count">0</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">Sesi tersimpan</div>
+      <div class="stat-value" id="session-count">0</div>
+    </div>
+  </div>
+
+  <!-- Verdict -->
+  <div class="verdict" id="verdict-box">
+    <div class="verdict-label">Hasil evaluasi</div>
+    <div class="verdict-text" id="verdict-text">Isi semua poin penilaian dulu.</div>
+  </div>
+
+  <!-- Commitment -->
+  <div class="commitment-box">
+    <label>Komitmen host untuk live berikutnya <em style="font-weight:400;color:var(--text3)">(diisi oleh host sendiri)</em></label>
+    <textarea id="commitment" placeholder="Satu hal yang akan saya perbaiki di live berikutnya adalah..."></textarea>
+  </div>
+
+  <!-- Buttons -->
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="saveSession()">Simpan sesi ini</button>
+    <button class="btn" onclick="printPage()">Cetak / export PDF</button>
+    <button class="btn btn-danger" onclick="resetForm()">Reset form</button>
+  </div>
+
+  <!-- History -->
+  <div class="history-section">
+    <div class="history-header">
+      <h2>Riwayat evaluasi</h2>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <select id="brand-filter" onchange="renderHistory()" style="padding:5px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:12px;color:var(--text2);background:var(--surface);outline:none;">
+          <option value="">Semua brand</option>
+          <option value="Onebear">Onebear</option>
+          <option value="Supoe">Supoe</option>
+          <option value="Momso">Momso</option>
+        </select>
+        <button class="btn-sm" onclick="exportCSV()">Export CSV</button>
+      </div>
+    </div>
+    <div id="history-list"><p class="history-empty">Belum ada sesi yang tersimpan.</p></div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// CONFIG — isi setelah setup Supabase
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+const SUPABASE_URL  = 'https://pwqozfqqaewjpnpkydpo.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_1VeUHXivMJkjqKGnAP4_vw_tr614ZcW';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+const SECTIONS = [
+  {
+    id: 'energi',
+    title: 'Energi & konsistensi',
+    color: '#fef3c7',
+    icon: '⚡',
+    items: [
+      'Semangat konsisten dari menit pertama sampai akhir live',
+      'Kecepatan bicara pas — tidak terlalu cepat atau terlalu lambat',
+      'Volume suara jelas dan stabil sepanjang live',
+      'Senyum natural, tidak kaku atau dipaksain',
+    ]
+  },
+  {
+    id: 'presence',
+    title: 'Presence & bahasa tubuh',
+    color: '#ede9fe',
+    icon: '👁',
+    items: [
+      'Tatapan ke kamera, bukan ke layar atau HP sendiri',
+      'Gesture tangan aktif saat menjelaskan produk',
+      'Posisi badan tegak dan engaging, tidak lesu',
+    ]
+  },
+  {
+    id: 'script',
+    title: 'Penguasaan script',
+    color: '#dbeafe',
+    icon: '📝',
+    items: [
+      'Opening natural, tidak terlihat baca atau hafalan kaku',
+      'Variasi script dipakai — tidak itu-itu saja tiap sesi',
+      'Transisi antar section ngalir (opening → interaksi → closing)',
+      'Closing tegas dan bikin urgensi, bukan ragu-ragu',
+    ]
+  },
+  {
+    id: 'produk',
+    title: 'Penguasaan produk',
+    color: '#dcfce7',
+    icon: '🎒',
+    items: [
+      'Hafal detail produk: bahan, ukuran, keunggulan tas',
+      'Bisa jawab pertanyaan penonton spontan tanpa panik',
+      'Demo produk rapi dan meyakinkan kalau dilakukan',
+    ]
+  },
+  {
+    id: 'situasi',
+    title: 'Respon situasi',
+    color: '#ffedd5',
+    icon: '🚨',
+    items: [
+      'Waktu sepi — bisa recovery sendiri, tidak langsung freeze',
+      'Komentar penonton terbaca dan direspon secara strategis',
+      'Waktu blank — ada kalimat jembatan, tidak diam awkward',
+    ]
+  },
+  {
+    id: 'attitude',
+    title: 'Attitude & growth mindset',
+    color: '#fce7f3',
+    icon: '💪',
+    items: [
+      'Mau nerima feedback tanpa defensif',
+      'Ada inisiatif improve sendiri tanpa harus diingetin terus',
+    ]
+  },
+];
+
+const scores = {};
+let sessions = [];
+
+const HOST_MAP = {
+  'Onebear': ['Sinta', 'Indah'],
+  'Supoe': ['Salma', 'Nadya'],
+  'Momso': ['Yaya', 'Fira'],
+};
+
+function updateHostOptions(selectedHost) {
+  const brand = document.getElementById('brand').value;
+  const hostSelect = document.getElementById('host-name');
+  hostSelect.innerHTML = '';
+  if (!brand) {
+    hostSelect.innerHTML = '<option value="">Pilih brand dulu</option>';
+    return;
+  }
+  const hosts = HOST_MAP[brand] || [];
+  hostSelect.innerHTML = '<option value="">Pilih host</option>' +
+    hosts.map(h => `<option value="${h}" ${h === selectedHost ? 'selected' : ''}>${h}</option>`).join('');
+}
+
+function buildUI() {
+  const container = document.getElementById('sections-container');
+  SECTIONS.forEach(sec => {
+    const card = document.createElement('div');
+    card.className = 'section-card';
+    const itemsHtml = sec.items.map((label, i) => {
+      const key = `${sec.id}_${i}`;
+      scores[key] = 0;
+      return `
+        <div class="item-row">
+          <span class="item-label">${label}</span>
+          <div class="stars" id="stars_${key}">
+            ${[1,2,3,4,5].map(n =>
+              `<button class="star" onclick="setScore('${key}',${n})" title="Nilai ${n}">${n}</button>`
+            ).join('')}
+          </div>
+        </div>`;
+    }).join('');
+
+    card.innerHTML = `
+      <div class="section-head">
+        <div class="section-name">
+          <div class="section-icon" style="background:${sec.color}">${sec.icon}</div>
+          ${sec.title}
+        </div>
+        <div class="section-avg" id="avg_${sec.id}">—</div>
+      </div>
+      ${itemsHtml}
+      <div class="section-notes">
+        <textarea id="notes_${sec.id}" placeholder="Catatan untuk ${sec.title.toLowerCase()}..."></textarea>
+      </div>`;
+    container.appendChild(card);
+  });
+  updateFilledCount();
+  renderHistory();
+}
+
+function setScore(key, val) {
+  scores[key] = val;
+  const starsEl = document.getElementById(`stars_${key}`);
+  starsEl.querySelectorAll('.star').forEach((s, i) => {
+    s.classList.toggle('on', i < val);
+  });
+  const secId = key.split('_')[0];
+  updateSectionAvg(secId);
+  updateSummary();
+}
+
+function updateSectionAvg(secId) {
+  const sec = SECTIONS.find(s => s.id === secId);
+  const vals = sec.items.map((_, i) => scores[`${secId}_${i}`]).filter(v => v > 0);
+  const avg = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '—';
+  const el = document.getElementById(`avg_${secId}`);
+  el.textContent = vals.length ? `${avg} / 5` : '—';
+  el.className = 'section-avg' + (vals.length ? ' filled' : '');
+}
+
+function updateSummary() {
+  const allVals = Object.values(scores).filter(v => v > 0);
+  const totalItems = Object.keys(scores).length;
+  const total = allVals.reduce((a,b)=>a+b,0);
+  const max = totalItems * 5;
+  const avg = allVals.length ? total/allVals.length : 0;
+
+  document.getElementById('total-score').textContent = allVals.length ? `${total}/${max}` : '—';
+  document.getElementById('avg-score').textContent = allVals.length ? avg.toFixed(1) : '—';
+
+  const cls = avg >= 4 ? 'good' : avg >= 2.5 ? 'warn' : 'bad';
+  document.getElementById('total-score').className = 'stat-value ' + (allVals.length ? cls : '');
+  document.getElementById('avg-score').className = 'stat-value ' + (allVals.length ? cls : '');
+
+  updateVerdict(avg, allVals.length, totalItems);
+  updateFilledCount();
+}
+
+function updateFilledCount() {
+  const total = Object.keys(scores).length;
+  const filled = Object.values(scores).filter(v => v > 0).length;
+  document.getElementById('filled-count').textContent = `${filled}/${total}`;
+}
+
+function updateVerdict(avg, filledCount, totalItems) {
+  const box = document.getElementById('verdict-box');
+  const txt = document.getElementById('verdict-text');
+  if (!filledCount) {
+    box.className = 'verdict';
+    txt.textContent = 'Isi semua poin penilaian dulu.';
+    return;
+  }
+  if (filledCount < totalItems) {
+    box.className = 'verdict';
+    txt.textContent = `Masih ada ${totalItems - filledCount} poin yang belum diisi.`;
+    return;
+  }
+  if (avg >= 4) {
+    box.className = 'verdict good';
+    txt.textContent = `Performa sangat baik (rata-rata ${avg.toFixed(1)}/5). Host siap handle live mandiri dengan target yang lebih tinggi. Fokus selanjutnya: konsistensi dan eksperimen variasi script yang lebih advanced.`;
+  } else if (avg >= 3) {
+    box.className = 'verdict warn';
+    txt.textContent = `Performa cukup baik (rata-rata ${avg.toFixed(1)}/5), ada beberapa area yang perlu diperkuat. Identifikasi 1–2 poin dengan skor terendah dan fokus ke situ dulu di live berikutnya. Jangan overload feedback.`;
+  } else {
+    box.className = 'verdict bad';
+    txt.textContent = `Perlu perhatian lebih (rata-rata ${avg.toFixed(1)}/5). Jadwalkan sesi coaching tambahan dan fokus ke fondasi dulu — energi, tatapan, dan delivery script dasar — sebelum ke teknik yang lebih advanced.`;
+  }
+}
+
+async function saveSession() {
+  const host = document.getElementById('host-name').value.trim();
+  const sesi = document.getElementById('sesi').value.trim();
+  const tanggal = document.getElementById('tanggal').value;
+  const brand = document.getElementById('brand').value;
+  const commitment = document.getElementById('commitment').value.trim();
+
+  if (!host) { alert('Pilih nama host dulu ya.'); return; }
+  if (!brand) { alert('Pilih brand dulu ya.'); return; }
+
+  const allVals = Object.values(scores).filter(v => v > 0);
+  if (!allVals.length) { alert('Isi penilaian dulu sebelum menyimpan.'); return; }
+
+  const total = allVals.reduce((a,b)=>a+b,0);
+  const max = Object.keys(scores).length * 5;
+  const avg = parseFloat((total / allVals.length).toFixed(1));
+
+  const sectionData = SECTIONS.map(sec => ({
+    id: sec.id,
+    title: sec.title,
+    scores: sec.items.map((_, i) => scores[`${sec.id}_${i}`]),
+    notes: document.getElementById(`notes_${sec.id}`).value.trim(),
+  }));
+
+  const payload = {
+    host, brand,
+    evaluasi_ke: sesi || null,
+    tanggal: tanggal || null,
+    commitment: commitment || null,
+    total, max, avg,
+    filled_count: allVals.length,
+    sections: sectionData,
+  };
+
+  showToast('Menyimpan...', 'info');
+  const { data, error } = await sb.from('evaluasi_host').insert([payload]).select();
+  if (error) { showToast('Gagal menyimpan: ' + error.message, 'error'); return; }
+
+  showToast(`Evaluasi ${host} berhasil disimpan!`, 'success');
+  await fetchSessions();
+}
+
+async function fetchSessions() {
+  const { data, error } = await sb.from('evaluasi_host').select('*').order('created_at', { ascending: false });
+  if (error) { showToast('Gagal load data: ' + error.message, 'error'); return; }
+  sessions = data || [];
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  document.getElementById('session-count').textContent = sessions.length;
+
+  const brandFilter = document.getElementById('brand-filter')?.value || '';
+  const filtered = brandFilter ? sessions.filter(s => s.brand === brandFilter) : sessions;
+  if (!filtered.length) {
+    list.innerHTML = '<p class="history-empty">' + (brandFilter ? 'Belum ada data untuk brand ' + brandFilter + '.' : 'Belum ada evaluasi yang tersimpan.') + '</p>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(s => {
+    const avg = parseFloat(s.avg);
+    const cls = avg >= 4 ? 'good' : avg >= 2.5 ? 'warn' : 'bad';
+    const tgl = s.tanggal ? new Date(s.tanggal + 'T00:00:00').toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'}) : '—';
+    const evalKe = s.evaluasi_ke ? '— Evaluasi ke-' + s.evaluasi_ke : '';
+    return `
+      <div class="history-item">
+        <div class="history-dot ${cls}"></div>
+        <div class="history-info">
+          <div class="history-name">${s.host} ${evalKe}</div>
+          <div class="history-meta">${s.brand ? s.brand + ' &nbsp;·&nbsp; ' : ''}${tgl} &nbsp;·&nbsp; ${s.filled_count}/${Object.keys(scores).length} poin terisi</div>
+        </div>
+        <div class="history-score">${s.avg}<small>/5</small></div>
+        <div class="history-actions">
+          <button class="btn-sm" onclick="loadSession(${s.id})">Lihat</button>
+          <button class="btn-sm del" onclick="deleteSession(${s.id})">Hapus</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function loadSession(id) {
+  const s = sessions.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('brand').value = s.brand || '';
+  updateHostOptions(s.host);
+  document.getElementById('sesi').value = s.evaluasi_ke || '';
+  document.getElementById('tanggal').value = s.tanggal || '';
+  document.getElementById('commitment').value = s.commitment || '';
+
+  s.sections.forEach(sec => {
+    sec.scores.forEach((val, i) => {
+      const key = `${sec.id}_${i}`;
+      scores[key] = val;
+      const starsEl = document.getElementById(`stars_${key}`);
+      if (starsEl) starsEl.querySelectorAll('.star').forEach((star, si) => star.classList.toggle('on', si < val));
+    });
+    const notesEl = document.getElementById(`notes_${sec.id}`);
+    if (notesEl) notesEl.value = sec.notes || '';
+    updateSectionAvg(sec.id);
+  });
+  updateSummary();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+async function deleteSession(id) {
+  if (!confirm('Hapus evaluasi ini? Data tidak bisa dikembalikan.')) return;
+  const { error } = await sb.from('evaluasi_host').delete().eq('id', id);
+  if (error) { showToast('Gagal hapus: ' + error.message, 'error'); return; }
+  showToast('Evaluasi berhasil dihapus.', 'success');
+  await fetchSessions();
+}
+
+function resetForm() {
+  if (!confirm('Reset semua isian form?')) return;
+  document.getElementById('host-name').value = '';
+  document.getElementById('sesi').value = '';
+  document.getElementById('tanggal').value = '';
+  document.getElementById('brand').value = '';
+  updateHostOptions();
+  document.getElementById('commitment').value = '';
+  Object.keys(scores).forEach(k => scores[k] = 0);
+  document.querySelectorAll('.star').forEach(s => s.classList.remove('on'));
+  document.querySelectorAll('.section-notes textarea').forEach(t => t.value = '');
+  SECTIONS.forEach(sec => {
+    const el = document.getElementById(`avg_${sec.id}`);
+    el.textContent = '—';
+    el.className = 'section-avg';
+  });
+  document.getElementById('total-score').textContent = '—';
+  document.getElementById('avg-score').textContent = '—';
+  document.getElementById('total-score').className = 'stat-value';
+  document.getElementById('avg-score').className = 'stat-value';
+  document.getElementById('filled-count').textContent = `0/${Object.keys(scores).length}`;
+  document.getElementById('verdict-box').className = 'verdict';
+  document.getElementById('verdict-text').textContent = 'Isi semua poin penilaian dulu.';
+}
+
+function printPage() {
+  window.print();
+}
+
+function exportCSV() {
+  if (!sessions.length) { alert('Belum ada data tersimpan.'); return; }
+  const brandFilter = document.getElementById('brand-filter')?.value || '';
+  const data = brandFilter ? sessions.filter(s => s.brand === brandFilter) : sessions;
+  const headers = ['Host', 'Brand', 'Evaluasi ke-', 'Tanggal', 'Rata-rata', 'Total', 'Max',
+    ...SECTIONS.map(s => s.title), 'Komitmen'];
+  const rows = data.map(s => {
+    const secAvgs = (s.sections || []).map(sec => {
+      const vals = (sec.scores || []).filter(v => v > 0);
+      return vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '';
+    });
+    return [s.host, s.brand || '', s.evaluasi_ke || '', s.tanggal || '', s.avg, s.total, s.max, ...secAvgs, s.commitment || '']
+      .map(v => `"${String(v).replace(/"/g,'""')}"`)
+      .join(',');
+  });
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], {type: 'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `evaluasi_host_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+buildUI();
+fetchSessions();
+</script>
+<div class="toast" id="toast"></div>
+<script>
+let toastTimer;
+function showToast(msg, type='info') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + type + ' show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.className = 'toast', 3000);
+}
+</script>
+</body>
+</html>
