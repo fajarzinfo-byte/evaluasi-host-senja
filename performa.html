@@ -502,13 +502,15 @@ function renderPerfBody(ctx, allData, label, month){
 // ════════════════════════════════════
 let allPerf = [];
 function buildLeader(){
-  document.getElementById('greeting').textContent = 'Dashboard Performa Live';
-  document.getElementById('subtitle').textContent = 'Pantau performa semua host';
+  document.getElementById('greeting').textContent = 'Panel Leader';
+  document.getElementById('subtitle').textContent = 'Evaluasi & performa semua host';
   document.getElementById('tabs').innerHTML =
-    `<div class="tab active" onclick="switchTab(this,'l-dash')">Dashboard</div>`+
+    `<div class="tab active" onclick="switchTab(this,'l-home')">Beranda</div>`+
+    `<div class="tab" onclick="switchTab(this,'l-dash')">Dashboard Performa</div>`+
     `<div class="tab" onclick="switchTab(this,'l-import')">Import Data</div>`;
   document.getElementById('panels').innerHTML =
-    `<div class="panel active" id="l-dash"><div id="dashContent"><p class="empty">Memuat...</p></div></div>`+
+    `<div class="panel active" id="l-home"><div id="leaderHome"><p class="empty">Memuat...</p></div></div>`+
+    `<div class="panel" id="l-dash"><div id="dashContent"><p class="empty">Memuat...</p></div></div>`+
     `<div class="panel" id="l-import">${importHTML()}</div>`;
   setupDrop();
   loadDash();
@@ -519,6 +521,70 @@ async function loadDash(){
   if(error){document.getElementById('dashContent').innerHTML='<p class="empty">Gagal memuat.</p>';return;}
   allPerf=data||[];
   renderDash();
+  renderLeaderHome();
+}
+
+function renderLeaderHome(){
+  const box=document.getElementById('leaderHome');
+  const now=new Date();
+  const curMonth=now.toISOString().slice(0,7);
+  const monthName=now.toLocaleDateString('id-ID',{month:'long',year:'numeric'});
+  const md=allPerf.filter(r=>r.tanggal&&r.tanggal.startsWith(curMonth));
+  const tot=md.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.viewers+=+r.viewers||0;return a;},{gmv:0,pembeli:0,viewers:0});
+  const activeHosts=new Set(md.map(r=>r.host_email)).size;
+
+  // per-brand GMV bulan ini
+  const brands=['Onebear','Supoe','Momso'];
+  const brandStats=brands.map(b=>{
+    const bd=md.filter(r=>r.brand===b);
+    return {b, gmv:bd.reduce((a,r)=>a+(+r.gmv||0),0), sesi:bd.length};
+  });
+
+  box.innerHTML=`
+    <div style="background:linear-gradient(135deg,#1a1917,#2d2b27);border-radius:14px;padding:24px;color:#fff;margin-bottom:1.3rem">
+      <div style="font-size:12px;color:#a09e99;text-transform:uppercase;letter-spacing:.05em">Total GMV Tim — ${monthName}</div>
+      <div style="font-size:34px;font-weight:600;letter-spacing:-.02em;margin:6px 0">${rp(tot.gmv)}</div>
+      <div style="display:flex;gap:20px;font-size:13px;color:#d0cec6;flex-wrap:wrap">
+        <span>${md.length} sesi live</span><span>${activeHosts} host aktif</span><span>${tot.pembeli} pembeli</span><span>${tot.viewers.toLocaleString('id-ID')} viewers</span>
+      </div>
+    </div>
+
+    <div class="grp-head">GMV per Brand Bulan Ini</div>
+    <div class="stats" style="margin-bottom:1.3rem">
+      ${brandStats.map(s=>`<div class="stat"><div class="stat-l">${s.b}</div><div class="stat-v">${rp(s.gmv)}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${s.sesi} sesi</div></div>`).join('')}
+      <div class="stat"><div class="stat-l">Semua Brand</div><div class="stat-v good">${rp(tot.gmv)}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${md.length} sesi</div></div>
+    </div>
+
+    <div class="grp-head">Menu</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <a class="menu-card" href="https://tinyurl.com/leader-senja" style="text-decoration:none;color:inherit">
+        <div class="menu-ic" style="background:#fffbeb;color:#d97706">✏️</div>
+        <div class="menu-t">Input Evaluasi</div>
+        <div class="menu-s">Nilai host (17 poin / 6 kategori)</div>
+      </a>
+      <a class="menu-card" href="https://tinyurl.com/dashboard-senja" style="text-decoration:none;color:inherit">
+        <div class="menu-ic" style="background:#eff4ff;color:#2563eb">📋</div>
+        <div class="menu-t">Dashboard Evaluasi</div>
+        <div class="menu-s">Pantau skor & progress semua host</div>
+      </a>
+      <div class="menu-card" onclick="goLeaderTab('l-dash',1)">
+        <div class="menu-ic" style="background:#f0fdf4;color:#16a34a">📊</div>
+        <div class="menu-t">Dashboard Performa</div>
+        <div class="menu-s">GMV, CTR, konversi per host</div>
+      </div>
+      <div class="menu-card" onclick="goLeaderTab('l-import',2)">
+        <div class="menu-ic" style="background:#f5f3ff;color:#7c3aed">📥</div>
+        <div class="menu-t">Import Data</div>
+        <div class="menu-s">Upload export TikTok per brand</div>
+      </div>
+    </div>`;
+}
+
+function goLeaderTab(panelId, tabIdx){
+  const tabs=document.querySelectorAll('#tabs .tab');
+  tabs.forEach((t,i)=>t.classList.toggle('active', i===tabIdx));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(panelId).classList.add('active');
 }
 
 function renderDash(){
@@ -756,8 +822,8 @@ function switchTab(el,id){
   document.getElementById(id).classList.add('active');
 }
 function switchTabById(id){
-  document.querySelectorAll('.tab').forEach((t,i)=>{
-    t.classList.toggle('active', (id==='l-dash'&&i===0)||(id==='l-import'&&i===1));
+  document.querySelectorAll('#tabs .tab').forEach((t,i)=>{
+    t.classList.toggle('active', (id==='l-home'&&i===0)||(id==='l-dash'&&i===1)||(id==='l-import'&&i===2));
   });
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
