@@ -339,11 +339,27 @@ async function loadMine(){
   const box=document.getElementById('mineContent');
   if(error){box.innerHTML='<p class="empty">Gagal memuat data.</p>';return;}
   if(!data.length){box.innerHTML='<p class="empty">Belum ada data performa. Isi lewat tab Input Performa.</p>';return;}
-  renderPerformanceView(box, data, HOST_MAP[ME].name);
+  renderPerformanceView(box, data, HOST_MAP[ME].name, 'mine');
 }
 
-// Shared performance view (host's own, or leader drilldown)
-function renderPerformanceView(box, data, label){
+// Shared performance view with month filter (host's own, or leader drilldown)
+function renderPerformanceView(box, allData, label, ctx){
+  ctx = ctx || ('pv_'+Math.random().toString(36).slice(2,8));
+  // collect months present
+  const months=[...new Set(allData.filter(r=>r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort().reverse();
+  const monthOpts=`<option value="">Semua bulan</option>`+months.map(m=>{const[y,mo]=m.split('-');return `<option value="${m}">${new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`}).join('');
+  box.innerHTML = `<div class="filter-row"><label style="font-size:13px;color:var(--text2)">Periode:</label>
+    <select id="mf_${ctx}">${monthOpts}</select></div><div id="body_${ctx}"></div>`;
+  // stash data on the select for re-render
+  const sel=document.getElementById('mf_'+ctx);
+  sel.onchange=()=>renderPerfBody(ctx, allData, label, sel.value);
+  renderPerfBody(ctx, allData, label, '');
+}
+
+function renderPerfBody(ctx, allData, label, month){
+  const data = month? allData.filter(r=>r.tanggal&&r.tanggal.startsWith(month)) : allData;
+  const box=document.getElementById('body_'+ctx);
+  if(!data.length){ box.innerHTML='<p class="empty">Tidak ada data di bulan ini.</p>'; return; }
   const tot = data.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.items+=+r.items||0;a.viewers+=+r.viewers||0;a.impresi+=+r.impresi||0;a.klik+=+r.klik_produk||0;a.likes+=+r.likes||0;a.kom+=+r.komentar||0;a.foll+=+r.followers_baru||0;return a;},{gmv:0,pembeli:0,items:0,viewers:0,impresi:0,klik:0,likes:0,kom:0,foll:0});
   const dTot = derive({gmv:tot.gmv,pembeli:tot.pembeli,impresi:tot.impresi,klik_produk:tot.klik,viewers:tot.viewers,likes:tot.likes,komentar:tot.kom,durasi_menit:0});
   const closing = data.filter(r=>(+r.gmv||0)>0).length;
@@ -384,14 +400,16 @@ function renderPerformanceView(box, data, label){
       <div class="stat"><div class="stat-l">Engagement</div><div class="stat-v">${pct(dTot.eng)}</div></div>
       <div class="stat" style="visibility:hidden"></div><div class="stat" style="visibility:hidden"></div><div class="stat" style="visibility:hidden"></div>
     </div>
-    <div class="chart-card"><h3>Tren GMV per sesi (urut waktu)</h3><div class="chart-wrap"><canvas id="chGmv"></canvas></div></div>
-    <div class="chart-card"><h3>GMV per sesi (rata-rata sesi 1–4)</h3><div class="chart-wrap sm"><canvas id="chSesi"></canvas></div></div>
+    <div class="chart-card"><h3>Tren GMV per sesi (urut waktu)</h3><div class="chart-wrap"><canvas id="chGmv_${ctx}"></canvas></div></div>
+    <div class="chart-card"><h3>GMV per sesi (rata-rata sesi 1–4)</h3><div class="chart-wrap sm"><canvas id="chSesi_${ctx}"></canvas></div></div>
     <div class="section-title">Riwayat Sesi</div>
     <div class="tbl-wrap"><div class="tbl-scroll"><table>
-      <thead><tr><th>Tgl</th><th>Sesi</th><th class="num">GMV</th><th class="num">Pembeli</th><th class="num">Viewers</th><th class="num">CTR</th><th class="num">CTOR</th><th class="num">GPM</th><th class="num">Eng</th></tr></thead>
+      <thead><tr><th>Tgl</th><th>Sesi</th><th class="num">GMV</th><th class="num">Pembeli</th><th class="num">Items</th><th class="num">Viewers</th><th class="num">Impresi</th><th class="num">Klik</th><th class="num">AvgDur</th><th class="num">Follow</th><th class="num">Likes</th><th class="num">Komen</th><th class="num">CTR</th><th class="num">CTOR</th><th class="num">GPM</th><th class="num">Eng</th></tr></thead>
       <tbody>${[...data].reverse().map(r=>{const d=derive(r);return `<tr>
         <td>${fmtTgl(r.tanggal)}</td><td>S${r.sesi}</td>
-        <td class="num">${rp(+r.gmv||0)}</td><td class="num">${r.pembeli||0}</td><td class="num">${(r.viewers||0).toLocaleString('id-ID')}</td>
+        <td class="num">${rp(+r.gmv||0)}</td><td class="num">${r.pembeli||0}</td><td class="num">${r.items||0}</td>
+        <td class="num">${(r.viewers||0).toLocaleString('id-ID')}</td><td class="num">${(r.impresi||0).toLocaleString('id-ID')}</td><td class="num">${r.klik_produk||0}</td>
+        <td class="num">${(+r.avg_view_dur||0).toFixed(0)}</td><td class="num">${r.followers_baru||0}</td><td class="num">${(r.likes||0).toLocaleString('id-ID')}</td><td class="num">${r.komentar||0}</td>
         <td class="num">${r.impresi?pct(d.ctr):'—'}</td><td class="num">${r.klik_produk?pct(d.ctor):'—'}</td>
         <td class="num">${r.impresi?rp(d.gpm):'—'}</td><td class="num">${r.viewers?pct(d.eng):'—'}</td>
       </tr>`}).join('')}</tbody>
@@ -399,13 +417,13 @@ function renderPerformanceView(box, data, label){
 
   destroyCharts();
   // GMV trend
-  charts.gmv = new Chart(document.getElementById('chGmv'),{type:'line',data:{
+  charts.gmv = new Chart(document.getElementById('chGmv_'+ctx),{type:'line',data:{
     labels:data.map((r,i)=>fmtTgl(r.tanggal)+' S'+r.sesi),
     datasets:[{data:data.map(r=>+r.gmv||0),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',tension:.3,pointRadius:2,fill:true}]
   },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'#f2f1ee'}}}}});
   // Avg per sesi
   const bySesi=[1,2,3,4].map(s=>{const ss=data.filter(r=>+r.sesi===s);return ss.length? ss.reduce((a,r)=>a+(+r.gmv||0),0)/ss.length : 0;});
-  charts.sesi = new Chart(document.getElementById('chSesi'),{type:'bar',data:{
+  charts.sesi = new Chart(document.getElementById('chSesi_'+ctx),{type:'bar',data:{
     labels:['Sesi 1','Sesi 2','Sesi 3','Sesi 4'],
     datasets:[{data:bySesi,backgroundColor:['#93c5fd','#60a5fa','#3b82f6','#2563eb'],borderRadius:5}]
   },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'#f2f1ee'}},x:{grid:{display:false}}}}});
@@ -508,7 +526,7 @@ function drilldown(email,name){
   const hd=allPerf.filter(r=>r.host_email===email).sort((a,b)=>(a.tanggal+a.sesi).localeCompare(b.tanggal+b.sesi));
   box.innerHTML=`<button class="btn-ghost" style="margin-bottom:14px" onclick="renderDash()">← Kembali ke dashboard</button>
     <div class="section-title">Detail Performa — ${name}</div><div id="ddView"></div>`;
-  renderPerformanceView(document.getElementById('ddView'), hd, name);
+  renderPerformanceView(document.getElementById('ddView'), hd, name, 'drill');
 }
 
 // ── Import ──
