@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Performa Live — Host</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg:#f7f6f3; --surface:#fff; --surface2:#f2f1ee;
+    --border:#e4e2dc; --border2:#d0cec6;
+    --text:#1a1917; --text2:#6b6860; --text3:#a09e99;
+    --accent:#2563eb; --accentbg:#eff4ff;
+    --good:#16a34a; --goodbg:#f0fdf4; --goodbd:#bbf7d0;
+    --warn:#d97706; --warnbg:#fffbeb; --warnbd:#fde68a;
+    --bad:#dc2626; --badbg:#fef2f2; --badbd:#fecaca;
+    --r:10px; --rs:6px;
+  }
+  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.6; min-height:100vh; }
+
+  /* Login */
+  .login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1rem; }
+  .login-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:2rem 2.5rem; width:100%; max-width:380px; text-align:center; }
+  .login-card h1 { font-size:20px; font-weight:600; margin-bottom:6px; }
+  .login-card p { font-size:13px; color:var(--text2); margin-bottom:1.5rem; }
+  .login-card input { width:100%; padding:10px 12px; border:1px solid var(--border2); border-radius:var(--rs); font-size:13px; margin-bottom:10px; font-family:'Inter',sans-serif; color:var(--text); outline:none; }
+  .login-card input:focus { border-color:var(--accent); }
+  .btn-primary { width:100%; padding:10px; background:var(--text); color:#fff; border:none; border-radius:var(--rs); font-size:13px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; }
+  .btn-primary:hover { background:#333; }
+  .msg { display:none; margin-top:12px; font-size:13px; }
+
+  /* App shell */
+  .app { display:none; max-width:920px; margin:0 auto; padding:1.5rem 1.5rem 4rem; }
+  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem; padding-bottom:1.2rem; border-bottom:1px solid var(--border); }
+  .topbar h1 { font-size:18px; font-weight:600; letter-spacing:-.02em; }
+  .topbar p { font-size:13px; color:var(--text2); margin-top:2px; }
+  .topbar-actions { display:flex; gap:8px; align-items:center; }
+  .btn-ghost { padding:6px 14px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); font-size:12px; cursor:pointer; font-family:'Inter',sans-serif; color:var(--text2); text-decoration:none; }
+  .btn-ghost:hover { background:var(--surface2); }
+
+  /* Tabs */
+  .tabs { display:flex; gap:6px; margin-bottom:1.3rem; flex-wrap:wrap; }
+  .tab { padding:8px 18px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); font-size:13px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; color:var(--text2); }
+  .tab.active { background:var(--text); color:#fff; border-color:var(--text); }
+  .panel { display:none; }
+  .panel.active { display:block; }
+
+  /* Form */
+  .form-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:1.5rem; margin-bottom:1rem; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .fg { display:flex; flex-direction:column; }
+  .fg.full { grid-column:1 / -1; }
+  .fg label { font-size:11px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px; }
+  .fg input, .fg select { width:100%; padding:9px 12px; border:1px solid var(--border2); border-radius:var(--rs); font-size:13px; font-family:'Inter',sans-serif; color:var(--text); background:var(--surface); outline:none; }
+  .fg input:focus, .fg select:focus { border-color:var(--accent); }
+  .group-label { font-size:12px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; margin:16px 0 4px; grid-column:1 / -1; }
+  .group-label:first-child { margin-top:0; }
+  .hint { font-size:11px; color:var(--text3); margin-top:3px; }
+
+  /* Calc preview */
+  .calc-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; padding-top:14px; border-top:1px dashed var(--border2); grid-column:1 / -1; }
+  .calc { background:var(--surface2); border-radius:var(--rs); padding:8px 10px; text-align:center; }
+  .calc-l { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.04em; }
+  .calc-v { font-size:14px; font-weight:600; color:var(--text); margin-top:2px; }
+
+  /* Stats */
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:1.3rem; }
+  .stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:13px 15px; text-align:center; }
+  .stat-l { font-size:10.5px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px; }
+  .stat-v { font-size:19px; font-weight:600; color:var(--text); letter-spacing:-.02em; }
+  .stat-v.good{color:var(--good);} .stat-v.warn{color:var(--warn);} .stat-v.bad{color:var(--bad);}
+
+  /* Chart card */
+  .chart-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:16px; margin-bottom:1.3rem; }
+  .chart-card h3 { font-size:13px; font-weight:500; margin-bottom:14px; }
+  .chart-wrap { height:200px; position:relative; }
+  .chart-wrap.sm { height:150px; }
+
+  /* Table */
+  .tbl-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:1.3rem; }
+  table { width:100%; border-collapse:collapse; font-size:12px; }
+  th { background:var(--surface2); text-align:left; padding:9px 11px; font-weight:600; color:var(--text2); font-size:11px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; border-bottom:1px solid var(--border); }
+  td { padding:9px 11px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  tr:last-child td { border-bottom:none; }
+  tr:hover td { background:var(--surface2); }
+  .tbl-scroll { overflow-x:auto; }
+  .num { text-align:right; font-variant-numeric:tabular-nums; }
+
+  /* Brand badge */
+  .badge { display:inline-block; font-size:10px; font-weight:500; padding:2px 8px; border-radius:10px; background:var(--accentbg); color:var(--accent); }
+
+  /* Import */
+  .drop { border:2px dashed var(--border2); border-radius:var(--r); padding:2.5rem; text-align:center; background:var(--surface); cursor:pointer; transition:border-color .15s; }
+  .drop:hover { border-color:var(--accent); }
+  .drop.over { border-color:var(--accent); background:var(--accentbg); }
+  .drop-icon { font-size:32px; margin-bottom:8px; }
+  .drop-t { font-size:14px; font-weight:500; margin-bottom:3px; }
+  .drop-s { font-size:12px; color:var(--text3); }
+
+  /* Misc */
+  .empty { text-align:center; padding:3rem 0; color:var(--text3); font-size:13px; }
+  .toast { position:fixed; bottom:24px; right:24px; padding:12px 18px; border-radius:var(--r); font-size:13px; font-weight:500; border:1px solid var(--border); background:var(--surface); box-shadow:0 4px 16px rgba(0,0,0,.1); z-index:9999; opacity:0; transform:translateY(8px); transition:.2s; pointer-events:none; }
+  .toast.show { opacity:1; transform:translateY(0); }
+  .toast.success { background:var(--goodbg); border-color:var(--goodbd); color:var(--good); }
+  .toast.error { background:var(--badbg); border-color:var(--badbd); color:var(--bad); }
+  .btn-accent { padding:10px 20px; background:var(--text); color:#fff; border:none; border-radius:var(--rs); font-size:13px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; }
+  .btn-accent:hover { background:#333; }
+  .btn-accent:disabled { opacity:.5; cursor:not-allowed; }
+  .filter-row { display:flex; gap:10px; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
+  .filter-row select { padding:7px 10px; border:1px solid var(--border2); border-radius:var(--rs); font-size:13px; font-family:'Inter',sans-serif; color:var(--text); background:var(--surface); outline:none; }
+  .section-title { font-size:15px; font-weight:600; margin-bottom:1rem; }
+
+  @media (max-width:600px){
+    .form-grid{grid-template-columns:1fr;} .stats{grid-template-columns:1fr 1fr;}
+    .calc-row{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="login">
+  <div class="login-card">
+    <h1>Performa Live</h1>
+    <p>Masuk dengan email &amp; password kamu</p>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="pass" placeholder="Password" />
+    <button class="btn-primary" id="loginBtn" onclick="doLogin()">Masuk</button>
+    <p class="msg" id="loginMsg"></p>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+  <div class="topbar">
+    <div>
+      <h1 id="greeting">Performa Live</h1>
+      <p id="subtitle"></p>
+    </div>
+    <div class="topbar-actions" id="topActions"></div>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div id="panels"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ── Config ──
+const SUPABASE_URL  = 'https://pwqozfqqaewjpnpkydpo.supabase.co';
+const SUPABASE_ANON = 'sb_publishable_1VeUHXivMJkjqKGnAP4_vw_tr614ZcW';
+const LEADER_EMAIL  = 'fajarzinfo@gmail.com';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+// host email -> {name, brand}
+const HOST_MAP = {
+  'cintaafandi@gmail.com':         { name:'Sinta', brand:'Onebear' },
+  'sitifaridah332@gmail.com':      { name:'Indah', brand:'Onebear' },
+  'salamahsalma0712@gmail.com':    { name:'Salma', brand:'Supoe' },
+  'iklilunnadia12@gmail.com':      { name:'Nadya', brand:'Supoe' },
+  'tiasetiawati30082006@gmail.com':{ name:'Yaya',  brand:'Momso' },
+  'syafirasiti143@gmail.com':      { name:'Fira',  brand:'Momso' },
+};
+// brand -> hosts split by sesi (pagi=1&2, sore=3&4). Default; bisa diubah di Import.
+const BRAND_HOSTS = {
+  'Onebear': { pagi:{name:'Sinta', email:'cintaafandi@gmail.com'}, sore:{name:'Indah', email:'sitifaridah332@gmail.com'} },
+  'Supoe':   { pagi:{name:'Salma', email:'salamahsalma0712@gmail.com'}, sore:{name:'Nadya', email:'iklilunnadia12@gmail.com'} },
+  'Momso':   { pagi:{name:'Yaya', email:'tiasetiawati30082006@gmail.com'}, sore:{name:'Fira', email:'syafirasiti143@gmail.com'} },
+};
+const ALL_HOSTS = Object.entries(HOST_MAP).map(([email,v])=>({email, ...v,
+  color: ({Sinta:'#e879f9',Indah:'#a855f7',Salma:'#3b82f6',Nadya:'#06b6d4',Yaya:'#f97316',Fira:'#ef4444'})[v.name] }));
+
+let ROLE = null, ME = null, charts = {};
+
+// ── Helpers ──
+function showToast(m,t='info'){const e=document.getElementById('toast');e.textContent=m;e.className='toast '+t+' show';clearTimeout(window._tt);window._tt=setTimeout(()=>e.className='toast',3000);}
+function rp(n){ return 'Rp ' + Math.round(n).toLocaleString('id-ID'); }
+function pct(n){ return (n*100).toFixed(2)+'%'; }
+function destroyCharts(){ Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}}); charts={}; }
+
+// Derived metrics
+function derive(r){
+  const gmv=+r.gmv||0, pembeli=+r.pembeli||0, impresi=+r.impresi||0, klik=+r.klik_produk||0,
+        viewers=+r.viewers||0, likes=+r.likes||0, komentar=+r.komentar||0, durasi=+r.durasi_menit||0;
+  return {
+    aov: pembeli? gmv/pembeli : 0,
+    ctr: impresi? klik/impresi : 0,
+    ctor: klik? pembeli/klik : 0,
+    gpm: impresi? gmv/impresi*1000 : 0,
+    eng: viewers? (likes+komentar)/viewers : 0,
+    gmvjam: durasi? gmv/(durasi/60) : 0,
+  };
+}
+
+// ── Login ──
+async function doLogin(){
+  const email=document.getElementById('email').value.trim().toLowerCase();
+  const pass=document.getElementById('pass').value;
+  if(!email||!pass){alert('Isi email & password dulu ya.');return;}
+  document.getElementById('loginBtn').textContent='Memproses...';
+  document.getElementById('loginBtn').disabled=true;
+  const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
+  if(error){
+    const m=document.getElementById('loginMsg');
+    m.textContent='Email atau password salah.'; m.style.color='#dc2626'; m.style.display='block';
+    document.getElementById('loginBtn').textContent='Masuk'; document.getElementById('loginBtn').disabled=false;
+    return;
+  }
+  initApp(data.user.email.toLowerCase());
+}
+
+async function init(){
+  const {data:{session}}=await sb.auth.getSession();
+  if(session) initApp(session.user.email.toLowerCase());
+}
+
+function initApp(email){
+  ME = email;
+  if(email===LEADER_EMAIL){ ROLE='leader'; }
+  else if(HOST_MAP[email]){ ROLE='host'; }
+  else { alert('Akun tidak dikenali.'); sb.auth.signOut(); return; }
+
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('topActions').innerHTML =
+    `<a class="btn-ghost" href="https://tinyurl.com/host-senja">Evaluasi</a>`+
+    `<button class="btn-ghost" onclick="sb.auth.signOut().then(()=>location.reload())">Keluar</button>`;
+
+  if(ROLE==='leader') buildLeader();
+  else buildHost();
+}
+
+// ════════════════════════════════════
+// HOST VIEW
+// ════════════════════════════════════
+function buildHost(){
+  const me = HOST_MAP[ME];
+  document.getElementById('greeting').textContent = 'Halo, '+me.name+'!';
+  document.getElementById('subtitle').textContent = 'Brand: '+me.brand;
+  document.getElementById('tabs').innerHTML =
+    `<div class="tab active" onclick="switchTab(this,'p-input')">Input Performa</div>`+
+    `<div class="tab" onclick="switchTab(this,'p-mine')">Performa Saya</div>`;
+  document.getElementById('panels').innerHTML =
+    `<div class="panel active" id="p-input">${hostFormHTML()}</div>`+
+    `<div class="panel" id="p-mine"><div id="mineContent"><p class="empty">Memuat...</p></div></div>`;
+  fillDateDropdown('f_tanggal');
+  attachCalcListeners();
+  loadMine();
+}
+
+function hostFormHTML(){
+  return `<div class="form-card"><div class="form-grid">
+    <div class="group-label">Info Sesi</div>
+    <div class="fg"><label>Tanggal</label><select id="f_tanggal"></select></div>
+    <div class="fg"><label>Sesi</label><select id="f_sesi">
+      <option value="1">Sesi 1 (07:00–10:00)</option>
+      <option value="2">Sesi 2 (11:00–14:00)</option>
+      <option value="3">Sesi 3 (14:30–17:30)</option>
+      <option value="4">Sesi 4 (18:30–21:30)</option>
+    </select><div class="hint">Live ulang karena error? Pilih sesi yang sama lagi.</div></div>
+
+    <div class="group-label">Revenue</div>
+    <div class="fg"><label>GMV (Rp)</label><input type="number" id="f_gmv" placeholder="0" /></div>
+    <div class="fg"><label>Pembeli</label><input type="number" id="f_pembeli" placeholder="0" /></div>
+    <div class="fg"><label>Items Sold</label><input type="number" id="f_items" placeholder="0" /></div>
+    <div class="fg"><label>Durasi (menit) — opsional</label><input type="number" id="f_durasi" placeholder="180" /></div>
+
+    <div class="group-label">Traffic</div>
+    <div class="fg"><label>Viewers</label><input type="number" id="f_viewers" placeholder="0" /></div>
+    <div class="fg"><label>Impresi</label><input type="number" id="f_impresi" placeholder="0" /></div>
+    <div class="fg"><label>Klik Produk</label><input type="number" id="f_klik" placeholder="0" /></div>
+    <div class="fg"><label>Avg View Duration (dtk)</label><input type="number" id="f_avg" placeholder="0" /></div>
+
+    <div class="group-label">Engagement</div>
+    <div class="fg"><label>Followers Baru</label><input type="number" id="f_foll" placeholder="0" /></div>
+    <div class="fg"><label>Likes</label><input type="number" id="f_likes" placeholder="0" /></div>
+    <div class="fg"><label>Komentar</label><input type="number" id="f_kom" placeholder="0" /></div>
+    <div class="fg"></div>
+
+    <div class="calc-row" id="calcRow">
+      <div class="calc"><div class="calc-l">AOV</div><div class="calc-v" id="c_aov">—</div></div>
+      <div class="calc"><div class="calc-l">CTR</div><div class="calc-v" id="c_ctr">—</div></div>
+      <div class="calc"><div class="calc-l">CTOR</div><div class="calc-v" id="c_ctor">—</div></div>
+      <div class="calc"><div class="calc-l">GPM</div><div class="calc-v" id="c_gpm">—</div></div>
+      <div class="calc"><div class="calc-l">Engagement</div><div class="calc-v" id="c_eng">—</div></div>
+      <div class="calc"><div class="calc-l">GMV / Jam</div><div class="calc-v" id="c_gmvjam">—</div></div>
+    </div>
+    <div class="fg full" style="margin-top:14px"><button class="btn-accent" onclick="submitPerforma()">Simpan Data Sesi</button></div>
+  </div></div>`;
+}
+
+function attachCalcListeners(){
+  ['f_gmv','f_pembeli','f_impresi','f_klik','f_viewers','f_likes','f_kom','f_durasi'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.addEventListener('input',updateCalc);
+  });
+}
+function updateCalc(){
+  const v=id=>+document.getElementById(id).value||0;
+  const r={gmv:v('f_gmv'),pembeli:v('f_pembeli'),impresi:v('f_impresi'),klik_produk:v('f_klik'),
+           viewers:v('f_viewers'),likes:v('f_likes'),komentar:v('f_kom'),durasi_menit:v('f_durasi')};
+  const d=derive(r);
+  document.getElementById('c_aov').textContent = r.pembeli? rp(d.aov):'—';
+  document.getElementById('c_ctr').textContent = r.impresi? pct(d.ctr):'—';
+  document.getElementById('c_ctor').textContent = r.klik_produk? pct(d.ctor):'—';
+  document.getElementById('c_gpm').textContent = r.impresi? rp(d.gpm):'—';
+  document.getElementById('c_eng').textContent = r.viewers? pct(d.eng):'—';
+  document.getElementById('c_gmvjam').textContent = r.durasi_menit? rp(d.gmvjam):'—';
+}
+
+async function submitPerforma(){
+  const me=HOST_MAP[ME];
+  const v=id=>document.getElementById(id).value;
+  const n=id=>+document.getElementById(id).value||0;
+  if(!v('f_tanggal')){alert('Pilih tanggal dulu.');return;}
+  if(n('f_gmv')===0 && n('f_viewers')===0){alert('Minimal isi GMV atau Viewers.');return;}
+  const payload={
+    host:me.name, brand:me.brand, host_email:ME,
+    tanggal:v('f_tanggal'), sesi:+v('f_sesi'),
+    gmv:n('f_gmv'), pembeli:n('f_pembeli'), items:n('f_items'),
+    viewers:n('f_viewers'), impresi:n('f_impresi'), klik_produk:n('f_klik'),
+    avg_view_dur:n('f_avg'), durasi_menit:n('f_durasi'),
+    followers_baru:n('f_foll'), likes:n('f_likes'), komentar:n('f_kom'),
+  };
+  const {error}=await sb.from('live_performance').insert([payload]);
+  if(error){showToast('Gagal: '+error.message,'error');return;}
+  showToast('Data sesi tersimpan!','success');
+  ['f_gmv','f_pembeli','f_items','f_viewers','f_impresi','f_klik','f_avg','f_durasi','f_foll','f_likes','f_kom'].forEach(id=>document.getElementById(id).value='');
+  updateCalc();
+  loadMine();
+}
+
+async function loadMine(){
+  const {data,error}=await sb.from('live_performance').select('*').eq('host_email',ME).order('tanggal',{ascending:true}).order('sesi',{ascending:true});
+  const box=document.getElementById('mineContent');
+  if(error){box.innerHTML='<p class="empty">Gagal memuat data.</p>';return;}
+  if(!data.length){box.innerHTML='<p class="empty">Belum ada data performa. Isi lewat tab Input Performa.</p>';return;}
+  renderPerformanceView(box, data, HOST_MAP[ME].name);
+}
+
+// Shared performance view (host's own, or leader drilldown)
+function renderPerformanceView(box, data, label){
+  const tot = data.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.viewers+=+r.viewers||0;a.impresi+=+r.impresi||0;a.klik+=+r.klik_produk||0;a.likes+=+r.likes||0;a.kom+=+r.komentar||0;a.foll+=+r.followers_baru||0;return a;},{gmv:0,pembeli:0,viewers:0,impresi:0,klik:0,likes:0,kom:0,foll:0});
+  const dTot = derive({gmv:tot.gmv,pembeli:tot.pembeli,impresi:tot.impresi,klik_produk:tot.klik,viewers:tot.viewers,likes:tot.likes,komentar:tot.kom,durasi_menit:0});
+  const closing = data.filter(r=>(+r.gmv||0)>0).length;
+
+  box.innerHTML = `
+    <div class="stats">
+      <div class="stat"><div class="stat-l">Total GMV</div><div class="stat-v good">${rp(tot.gmv)}</div></div>
+      <div class="stat"><div class="stat-l">Sesi</div><div class="stat-v">${data.length}<span style="font-size:12px;color:var(--text3)"> · ${closing} closing</span></div></div>
+      <div class="stat"><div class="stat-l">Total Pembeli</div><div class="stat-v">${tot.pembeli}</div></div>
+      <div class="stat"><div class="stat-l">AOV</div><div class="stat-v">${rp(dTot.aov)}</div></div>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-l">CTR LIVE</div><div class="stat-v">${pct(dTot.ctr)}</div></div>
+      <div class="stat"><div class="stat-l">CTOR</div><div class="stat-v">${pct(dTot.ctor)}</div></div>
+      <div class="stat"><div class="stat-l">GPM</div><div class="stat-v">${rp(dTot.gpm)}</div></div>
+      <div class="stat"><div class="stat-l">Engagement</div><div class="stat-v">${pct(dTot.eng)}</div></div>
+    </div>
+    <div class="chart-card"><h3>Tren GMV per sesi (urut waktu)</h3><div class="chart-wrap"><canvas id="chGmv"></canvas></div></div>
+    <div class="chart-card"><h3>GMV per sesi (rata-rata sesi 1–4)</h3><div class="chart-wrap sm"><canvas id="chSesi"></canvas></div></div>
+    <div class="section-title">Riwayat Sesi</div>
+    <div class="tbl-wrap"><div class="tbl-scroll"><table>
+      <thead><tr><th>Tgl</th><th>Sesi</th><th class="num">GMV</th><th class="num">Pembeli</th><th class="num">Viewers</th><th class="num">CTR</th><th class="num">CTOR</th><th class="num">GPM</th><th class="num">Eng</th></tr></thead>
+      <tbody>${[...data].reverse().map(r=>{const d=derive(r);return `<tr>
+        <td>${fmtTgl(r.tanggal)}</td><td>S${r.sesi}</td>
+        <td class="num">${rp(+r.gmv||0)}</td><td class="num">${r.pembeli||0}</td><td class="num">${(r.viewers||0).toLocaleString('id-ID')}</td>
+        <td class="num">${r.impresi?pct(d.ctr):'—'}</td><td class="num">${r.klik_produk?pct(d.ctor):'—'}</td>
+        <td class="num">${r.impresi?rp(d.gpm):'—'}</td><td class="num">${r.viewers?pct(d.eng):'—'}</td>
+      </tr>`}).join('')}</tbody>
+    </table></div></div>`;
+
+  destroyCharts();
+  // GMV trend
+  charts.gmv = new Chart(document.getElementById('chGmv'),{type:'line',data:{
+    labels:data.map((r,i)=>fmtTgl(r.tanggal)+' S'+r.sesi),
+    datasets:[{data:data.map(r=>+r.gmv||0),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',tension:.3,pointRadius:2,fill:true}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'#f2f1ee'}}}}});
+  // Avg per sesi
+  const bySesi=[1,2,3,4].map(s=>{const ss=data.filter(r=>+r.sesi===s);return ss.length? ss.reduce((a,r)=>a+(+r.gmv||0),0)/ss.length : 0;});
+  charts.sesi = new Chart(document.getElementById('chSesi'),{type:'bar',data:{
+    labels:['Sesi 1','Sesi 2','Sesi 3','Sesi 4'],
+    datasets:[{data:bySesi,backgroundColor:['#93c5fd','#60a5fa','#3b82f6','#2563eb'],borderRadius:5}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'#f2f1ee'}},x:{grid:{display:false}}}}});
+}
+
+// ════════════════════════════════════
+// LEADER VIEW
+// ════════════════════════════════════
+let allPerf = [];
+function buildLeader(){
+  document.getElementById('greeting').textContent = 'Dashboard Performa Live';
+  document.getElementById('subtitle').textContent = 'Pantau performa semua host';
+  document.getElementById('tabs').innerHTML =
+    `<div class="tab active" onclick="switchTab(this,'l-dash')">Dashboard</div>`+
+    `<div class="tab" onclick="switchTab(this,'l-import')">Import Data</div>`;
+  document.getElementById('panels').innerHTML =
+    `<div class="panel active" id="l-dash"><div id="dashContent"><p class="empty">Memuat...</p></div></div>`+
+    `<div class="panel" id="l-import">${importHTML()}</div>`;
+  setupDrop();
+  loadDash();
+}
+
+async function loadDash(){
+  const {data,error}=await sb.from('live_performance').select('*').order('tanggal',{ascending:true});
+  if(error){document.getElementById('dashContent').innerHTML='<p class="empty">Gagal memuat.</p>';return;}
+  allPerf=data||[];
+  renderDash();
+}
+
+function renderDash(){
+  const box=document.getElementById('dashContent');
+  // build month options
+  const months=[...new Set(allPerf.filter(r=>r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort().reverse();
+  const curMonth=document.getElementById('mFilter')?.value || '';
+  const curBrand=document.getElementById('bFilter')?.value || '';
+
+  const monthOpts=`<option value="">Semua bulan</option>`+months.map(m=>{const[y,mo]=m.split('-');return `<option value="${m}" ${m===curMonth?'selected':''}>${new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`}).join('');
+
+  const filtered=allPerf.filter(r=>(!curBrand||r.brand===curBrand)&&(!curMonth||(r.tanggal&&r.tanggal.startsWith(curMonth))));
+
+  const tot=filtered.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.impresi+=+r.impresi||0;a.klik+=+r.klik_produk||0;a.viewers+=+r.viewers||0;return a;},{gmv:0,pembeli:0,impresi:0,klik:0,viewers:0});
+  const dT=derive({gmv:tot.gmv,pembeli:tot.pembeli,impresi:tot.impresi,klik_produk:tot.klik,viewers:tot.viewers,likes:0,komentar:0,durasi_menit:0});
+
+  box.innerHTML=`
+    <div class="filter-row">
+      <select id="bFilter" onchange="renderDash()"><option value="">Semua brand</option>
+        <option value="Onebear" ${curBrand==='Onebear'?'selected':''}>Onebear</option>
+        <option value="Supoe" ${curBrand==='Supoe'?'selected':''}>Supoe</option>
+        <option value="Momso" ${curBrand==='Momso'?'selected':''}>Momso</option>
+      </select>
+      <select id="mFilter" onchange="renderDash()">${monthOpts}</select>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="stat-l">Total GMV</div><div class="stat-v good">${rp(tot.gmv)}</div></div>
+      <div class="stat"><div class="stat-l">Total Sesi</div><div class="stat-v">${filtered.length}</div></div>
+      <div class="stat"><div class="stat-l">Total Pembeli</div><div class="stat-v">${tot.pembeli}</div></div>
+      <div class="stat"><div class="stat-l">AOV Tim</div><div class="stat-v">${rp(dT.aov)}</div></div>
+    </div>
+    <div class="section-title">Performa per Host</div>
+    <div id="hostCards"></div>
+    <div class="chart-card"><h3>Perbandingan GMV antar host</h3><div class="chart-wrap"><canvas id="chCompare"></canvas></div></div>`;
+
+  // host cards
+  const hosts = curBrand? ALL_HOSTS.filter(h=>h.brand===curBrand) : ALL_HOSTS;
+  const cards = hosts.map(h=>{
+    const hd=filtered.filter(r=>r.host_email===h.email);
+    if(!hd.length) return `<div class="tbl-wrap" style="padding:14px 16px;margin-bottom:8px"><b>${h.name}</b> <span class="badge">${h.brand}</span><div style="color:var(--text3);font-size:12px;margin-top:4px">Belum ada data</div></div>`;
+    const g=hd.reduce((a,r)=>a+(+r.gmv||0),0);
+    const p=hd.reduce((a,r)=>a+(+r.pembeli||0),0);
+    const imp=hd.reduce((a,r)=>a+(+r.impresi||0),0);
+    const kl=hd.reduce((a,r)=>a+(+r.klik_produk||0),0);
+    const dd=derive({gmv:g,pembeli:p,impresi:imp,klik_produk:kl,viewers:1,likes:0,komentar:0,durasi_menit:0});
+    return `<div class="tbl-wrap" style="padding:14px 16px;margin-bottom:8px;cursor:pointer" onclick="drilldown('${h.email}','${h.name}')">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><b>${h.name}</b> <span class="badge">${h.brand}</span></div>
+        <div style="font-size:18px;font-weight:600;color:var(--good)">${rp(g)}</div>
+      </div>
+      <div style="display:flex;gap:18px;margin-top:8px;font-size:12px;color:var(--text2)">
+        <span>${hd.length} sesi</span><span>${p} pembeli</span><span>AOV ${rp(dd.aov)}</span><span>CTR ${pct(dd.ctr)}</span><span>CTOR ${pct(dd.ctor)}</span>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('hostCards').innerHTML=cards;
+
+  // compare chart
+  destroyCharts();
+  const cmpHosts=hosts.map(h=>({h, g:filtered.filter(r=>r.host_email===h.email).reduce((a,r)=>a+(+r.gmv||0),0)}));
+  charts.cmp=new Chart(document.getElementById('chCompare'),{type:'bar',data:{
+    labels:cmpHosts.map(x=>x.h.name),
+    datasets:[{data:cmpHosts.map(x=>x.g),backgroundColor:cmpHosts.map(x=>x.h.color),borderRadius:5}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1e6).toFixed(1)+'jt',font:{size:10}},grid:{color:'#f2f1ee'}},x:{grid:{display:false}}}}});
+}
+
+function drilldown(email,name){
+  switchTabById('l-dash');
+  const box=document.getElementById('dashContent');
+  const hd=allPerf.filter(r=>r.host_email===email).sort((a,b)=>(a.tanggal+a.sesi).localeCompare(b.tanggal+b.sesi));
+  box.innerHTML=`<button class="btn-ghost" style="margin-bottom:14px" onclick="renderDash()">← Kembali ke dashboard</button>
+    <div class="section-title">Detail Performa — ${name}</div><div id="ddView"></div>`;
+  renderPerformanceView(document.getElementById('ddView'), hd, name);
+}
+
+// ── Import ──
+function importHTML(){
+  return `<div class="form-card">
+    <div style="margin-bottom:14px;font-size:13px;color:var(--text2)">Upload file export TikTok LIVE (.xlsx). Sistem akan otomatis membagi data ke host &amp; sesi berdasarkan jam. Sesi error/kosong (GMV &amp; viewers = 0) otomatis dilewati.</div>
+    <div class="fg" style="margin-bottom:14px"><label>Brand file ini</label>
+      <select id="impBrand" onchange="updateImpHosts()">
+        <option value="Onebear">Onebear</option>
+        <option value="Supoe">Supoe</option>
+        <option value="Momso">Momso</option>
+      </select>
+    </div>
+    <div class="form-grid" style="margin-bottom:14px">
+      <div class="fg"><label>Host Sesi 1 &amp; 2 (pagi–siang)</label><select id="impPagi"></select></div>
+      <div class="fg"><label>Host Sesi 3 &amp; 4 (sore–malam)</label><select id="impSore"></select></div>
+    </div>
+    <div class="drop" id="drop">
+      <div class="drop-icon">📄</div>
+      <div class="drop-t">Klik atau drag file .xlsx ke sini</div>
+      <div class="drop-s">File export TikTok LIVE Seller Center</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" />
+    </div>
+    <div id="impPreview"></div>
+  </div>`;
+}
+
+function updateImpHosts(){
+  const brand=document.getElementById('impBrand').value;
+  const opts=ALL_HOSTS.filter(h=>h.brand===brand);
+  const cfg=BRAND_HOSTS[brand];
+  const mk=(sel)=>opts.map(h=>`<option value="${h.email}" ${h.email===sel?'selected':''}>${h.name}</option>`).join('');
+  document.getElementById('impPagi').innerHTML=mk(cfg.pagi.email);
+  document.getElementById('impSore').innerHTML=mk(cfg.sore.email);
+}
+
+function setupDrop(){
+  updateImpHosts();
+  const drop=document.getElementById('drop'), inp=document.getElementById('fileInput');
+  drop.onclick=()=>inp.click();
+  drop.ondragover=e=>{e.preventDefault();drop.classList.add('over');};
+  drop.ondragleave=()=>drop.classList.remove('over');
+  drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');if(e.dataTransfer.files[0])parseFile(e.dataTransfer.files[0]);};
+  inp.onchange=e=>{if(e.target.files[0])parseFile(e.target.files[0]);};
+}
+
+let pendingRows=[];
+function parseFile(file){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      // find the input sheet (first sheet with 'Input' or just first)
+      let sheetName=wb.SheetNames.find(n=>n.includes('Input'))||wb.SheetNames[0];
+      const ws=wb.Sheets[sheetName];
+      const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});
+      processImport(rows);
+    }catch(err){ showToast('Gagal baca file: '+err.message,'error'); }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function timeToMin(t){
+  if(!t)return null;
+  const m=String(t).match(/(\d{1,2}):(\d{2})/);
+  if(!m)return null;
+  return (+m[1])*60+(+m[2]);
+}
+function assignSesi(mins){
+  if(mins<11*60)return 1;
+  if(mins<14*60)return 2;
+  if(mins<18*60)return 3;
+  return 4;
+}
+function normDate(d){
+  if(!d)return null;
+  // accept 2026-05-01 or other; try Date parse
+  const s=String(d).trim();
+  let m=s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(m)return `${m[1]}-${m[2]}-${m[3]}`;
+  m=s.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if(m)return `${m[3]}-${String(m[2]).padStart(2,'0')}-${String(m[1]).padStart(2,'0')}`;
+  const dt=new Date(s); if(!isNaN(dt)) return dt.toISOString().slice(0,10);
+  return null;
+}
+
+function processImport(rows){
+  const brand=document.getElementById('impBrand').value;
+  const pagiEmail=document.getElementById('impPagi').value;
+  const soreEmail=document.getElementById('impSore').value;
+  const pagi=ALL_HOSTS.find(h=>h.email===pagiEmail), sore=ALL_HOSTS.find(h=>h.email===soreEmail);
+
+  // find header row: row containing 'Tanggal' and 'Waktu'
+  let hi=rows.findIndex(r=>r&&r.some(c=>String(c).trim()==='Tanggal')&&r.some(c=>String(c).includes('Waktu')));
+  if(hi<0){ showToast('Format tidak dikenali (tidak ada kolom Tanggal/Waktu).','error'); return; }
+  const head=rows[hi].map(c=>String(c).replace(/\n/g,' ').trim());
+  const col=name=>head.findIndex(h=>h.toLowerCase().includes(name.toLowerCase()));
+  const ci={ tgl:col('Tanggal'), wkt:col('Waktu'), dur:col('Durasi'), gmv:col('GMV'), pemb:col('Pembeli'),
+    items:col('Items'), view:col('Viewers'), imp:col('Impresi'), klik:col('Klik'),
+    avg:col('Avg Watch'), foll:col('Pengikut'), likes:col('Likes'), kom:col('Komentar') };
+
+  const num=v=>{ if(v==null||v==='')return 0; const n=parseFloat(String(v).replace(/[^\d.-]/g,'')); return isNaN(n)?0:n; };
+  pendingRows=[];
+  let dropped=0;
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i]; if(!r||!r[ci.tgl]||!r[ci.wkt])continue;
+    const tanggal=normDate(r[ci.tgl]); const mins=timeToMin(r[ci.wkt]);
+    if(!tanggal||mins==null)continue;
+    const sesi=assignSesi(mins);
+    const who = sesi<=2? pagi : sore;
+    const gmv=num(r[ci.gmv]), viewers=num(r[ci.view]);
+    if(gmv===0 && viewers===0){ dropped++; continue; }
+    pendingRows.push({
+      host:who.name, brand, host_email:who.email, tanggal, sesi,
+      gmv, pembeli:num(r[ci.pemb]), items:num(r[ci.items]),
+      viewers, impresi:num(r[ci.imp]), klik_produk:num(r[ci.klik]),
+      avg_view_dur:num(r[ci.avg]), durasi_menit:num(r[ci.dur]),
+      followers_baru:num(r[ci.foll]), likes:num(r[ci.likes]), komentar:num(r[ci.kom]),
+    });
+  }
+  // preview
+  const byHost={};
+  pendingRows.forEach(p=>{byHost[p.host]=(byHost[p.host]||0)+1;});
+  const summary=Object.entries(byHost).map(([h,c])=>`${h}: ${c} sesi`).join(' · ');
+  document.getElementById('impPreview').innerHTML=`
+    <div style="margin-top:16px;padding:14px;background:var(--goodbg);border:1px solid var(--goodbd);border-radius:var(--r)">
+      <div style="font-weight:600;color:var(--good);margin-bottom:4px">✓ ${pendingRows.length} sesi siap diimport (${dropped} dilewati)</div>
+      <div style="font-size:12px;color:var(--text2)">${summary}</div>
+    </div>
+    <div class="tbl-wrap" style="margin-top:12px"><div class="tbl-scroll"><table>
+      <thead><tr><th>Tgl</th><th>Host</th><th>Sesi</th><th class="num">GMV</th><th class="num">Viewers</th><th class="num">Klik</th></tr></thead>
+      <tbody>${pendingRows.slice(0,8).map(p=>`<tr><td>${fmtTgl(p.tanggal)}</td><td>${p.host}</td><td>S${p.sesi}</td><td class="num">${rp(p.gmv)}</td><td class="num">${p.viewers.toLocaleString('id-ID')}</td><td class="num">${p.klik_produk}</td></tr>`).join('')}</tbody>
+    </table></div></div>
+    ${pendingRows.length>8?`<div style="font-size:12px;color:var(--text3);margin:6px 0 12px">…dan ${pendingRows.length-8} sesi lainnya</div>`:'<div style="height:12px"></div>'}
+    <button class="btn-accent" onclick="confirmImport()">Import ${pendingRows.length} Sesi ke Database</button>`;
+}
+
+async function confirmImport(){
+  if(!pendingRows.length)return;
+  if(!confirm(`Import ${pendingRows.length} sesi? Pastikan data belum pernah diimport sebelumnya (untuk hindari duplikat).`))return;
+  showToast('Mengimport...','info');
+  // insert in chunks of 50
+  for(let i=0;i<pendingRows.length;i+=50){
+    const chunk=pendingRows.slice(i,i+50);
+    const {error}=await sb.from('live_performance').insert(chunk);
+    if(error){showToast('Gagal di baris '+i+': '+error.message,'error');return;}
+  }
+  showToast(`Berhasil import ${pendingRows.length} sesi!`,'success');
+  document.getElementById('impPreview').innerHTML='';
+  pendingRows=[];
+  loadDash();
+}
+
+// ── Tabs / utils ──
+function switchTab(el,id){
+  el.parentElement.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function switchTabById(id){
+  document.querySelectorAll('.tab').forEach((t,i)=>{
+    t.classList.toggle('active', (id==='l-dash'&&i===0)||(id==='l-import'&&i===1));
+  });
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+function fillDateDropdown(id){
+  const sel=document.getElementById(id); if(!sel)return;
+  const today=new Date(); let html='';
+  for(let i=0;i<30;i++){
+    const d=new Date(today); d.setDate(today.getDate()-i);
+    const iso=d.toISOString().slice(0,10);
+    html+=`<option value="${iso}">${d.toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short',year:'numeric'})}</option>`;
+  }
+  sel.innerHTML=html;
+}
+function fmtTgl(t){ if(!t)return'—'; const d=new Date(t+'T00:00:00'); return d.toLocaleDateString('id-ID',{day:'numeric',month:'short'}); }
+
+init();
+</script>
+</body>
+</html>
