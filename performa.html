@@ -72,6 +72,7 @@
   .stat-l { font-size:10.5px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px; }
   .stat-v { font-size:19px; font-weight:600; color:var(--text); letter-spacing:-.02em; }
   .stat-v.good{color:var(--good);} .stat-v.warn{color:var(--warn);} .stat-v.bad{color:var(--bad);}
+  .grp-head { font-size:12px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; margin:0 0 8px 2px; }
 
   /* Chart card */
   .chart-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:16px; margin-bottom:1.3rem; }
@@ -343,22 +344,45 @@ async function loadMine(){
 
 // Shared performance view (host's own, or leader drilldown)
 function renderPerformanceView(box, data, label){
-  const tot = data.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.viewers+=+r.viewers||0;a.impresi+=+r.impresi||0;a.klik+=+r.klik_produk||0;a.likes+=+r.likes||0;a.kom+=+r.komentar||0;a.foll+=+r.followers_baru||0;return a;},{gmv:0,pembeli:0,viewers:0,impresi:0,klik:0,likes:0,kom:0,foll:0});
+  const tot = data.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.items+=+r.items||0;a.viewers+=+r.viewers||0;a.impresi+=+r.impresi||0;a.klik+=+r.klik_produk||0;a.likes+=+r.likes||0;a.kom+=+r.komentar||0;a.foll+=+r.followers_baru||0;return a;},{gmv:0,pembeli:0,items:0,viewers:0,impresi:0,klik:0,likes:0,kom:0,foll:0});
   const dTot = derive({gmv:tot.gmv,pembeli:tot.pembeli,impresi:tot.impresi,klik_produk:tot.klik,viewers:tot.viewers,likes:tot.likes,komentar:tot.kom,durasi_menit:0});
   const closing = data.filter(r=>(+r.gmv||0)>0).length;
+  const totVwDur = data.reduce((a,r)=>a+((+r.avg_view_dur||0)*(+r.viewers||0)),0);
+  const avgDur = tot.viewers? totVwDur/tot.viewers : 0;
+  const N = n => (n||0).toLocaleString('id-ID');
 
   box.innerHTML = `
+    <div class="grp-head">Revenue</div>
     <div class="stats">
       <div class="stat"><div class="stat-l">Total GMV</div><div class="stat-v good">${rp(tot.gmv)}</div></div>
       <div class="stat"><div class="stat-l">Sesi</div><div class="stat-v">${data.length}<span style="font-size:12px;color:var(--text3)"> · ${closing} closing</span></div></div>
-      <div class="stat"><div class="stat-l">Total Pembeli</div><div class="stat-v">${tot.pembeli}</div></div>
-      <div class="stat"><div class="stat-l">AOV</div><div class="stat-v">${rp(dTot.aov)}</div></div>
+      <div class="stat"><div class="stat-l">Total Pembeli</div><div class="stat-v">${N(tot.pembeli)}</div></div>
+      <div class="stat"><div class="stat-l">Items Sold</div><div class="stat-v">${N(tot.items)}</div></div>
     </div>
+    <div class="grp-head">Traffic</div>
     <div class="stats">
+      <div class="stat"><div class="stat-l">Viewers</div><div class="stat-v">${N(tot.viewers)}</div></div>
+      <div class="stat"><div class="stat-l">Impresi</div><div class="stat-v">${N(tot.impresi)}</div></div>
+      <div class="stat"><div class="stat-l">Klik Produk</div><div class="stat-v">${N(tot.klik)}</div></div>
+      <div class="stat"><div class="stat-l">Avg View Dur</div><div class="stat-v">${avgDur.toFixed(1)}<span style="font-size:12px;color:var(--text3)"> dtk</span></div></div>
+    </div>
+    <div class="grp-head">Engagement</div>
+    <div class="stats">
+      <div class="stat"><div class="stat-l">Followers Baru</div><div class="stat-v">${N(tot.foll)}</div></div>
+      <div class="stat"><div class="stat-l">Likes</div><div class="stat-v">${N(tot.likes)}</div></div>
+      <div class="stat"><div class="stat-l">Komentar</div><div class="stat-v">${N(tot.kom)}</div></div>
+      <div class="stat"><div class="stat-l">Items / Sesi</div><div class="stat-v">${data.length?(tot.items/data.length).toFixed(1):'0'}</div></div>
+    </div>
+    <div class="grp-head">Metrik Konversi (dihitung otomatis)</div>
+    <div class="stats">
+      <div class="stat"><div class="stat-l">AOV</div><div class="stat-v">${rp(dTot.aov)}</div></div>
       <div class="stat"><div class="stat-l">CTR LIVE</div><div class="stat-v">${pct(dTot.ctr)}</div></div>
       <div class="stat"><div class="stat-l">CTOR</div><div class="stat-v">${pct(dTot.ctor)}</div></div>
       <div class="stat"><div class="stat-l">GPM</div><div class="stat-v">${rp(dTot.gpm)}</div></div>
+    </div>
+    <div class="stats" style="margin-bottom:1.3rem">
       <div class="stat"><div class="stat-l">Engagement</div><div class="stat-v">${pct(dTot.eng)}</div></div>
+      <div class="stat" style="visibility:hidden"></div><div class="stat" style="visibility:hidden"></div><div class="stat" style="visibility:hidden"></div>
     </div>
     <div class="chart-card"><h3>Tren GMV per sesi (urut waktu)</h3><div class="chart-wrap"><canvas id="chGmv"></canvas></div></div>
     <div class="chart-card"><h3>GMV per sesi (rata-rata sesi 1–4)</h3><div class="chart-wrap sm"><canvas id="chSesi"></canvas></div></div>
@@ -451,6 +475,8 @@ function renderDash(){
     if(!hd.length) return `<div class="tbl-wrap" style="padding:14px 16px;margin-bottom:8px"><b>${h.name}</b> <span class="badge">${h.brand}</span><div style="color:var(--text3);font-size:12px;margin-top:4px">Belum ada data</div></div>`;
     const g=hd.reduce((a,r)=>a+(+r.gmv||0),0);
     const p=hd.reduce((a,r)=>a+(+r.pembeli||0),0);
+    const it=hd.reduce((a,r)=>a+(+r.items||0),0);
+    const vw=hd.reduce((a,r)=>a+(+r.viewers||0),0);
     const imp=hd.reduce((a,r)=>a+(+r.impresi||0),0);
     const kl=hd.reduce((a,r)=>a+(+r.klik_produk||0),0);
     const dd=derive({gmv:g,pembeli:p,impresi:imp,klik_produk:kl,viewers:1,likes:0,komentar:0,durasi_menit:0});
@@ -459,9 +485,10 @@ function renderDash(){
         <div><b>${h.name}</b> <span class="badge">${h.brand}</span></div>
         <div style="font-size:18px;font-weight:600;color:var(--good)">${rp(g)}</div>
       </div>
-      <div style="display:flex;gap:18px;margin-top:8px;font-size:12px;color:var(--text2)">
-        <span>${hd.length} sesi</span><span>${p} pembeli</span><span>AOV ${rp(dd.aov)}</span><span>CTR ${pct(dd.ctr)}</span><span>CTOR ${pct(dd.ctor)}</span>
+      <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--text2);flex-wrap:wrap">
+        <span>${hd.length} sesi</span><span>${p.toLocaleString('id-ID')} pembeli</span><span>${it.toLocaleString('id-ID')} items</span><span>${vw.toLocaleString('id-ID')} viewers</span><span>AOV ${rp(dd.aov)}</span><span>CTR ${pct(dd.ctr)}</span><span>CTOR ${pct(dd.ctor)}</span>
       </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:6px">Klik untuk lihat detail lengkap →</div>
     </div>`;
   }).join('');
   document.getElementById('hostCards').innerHTML=cards;
