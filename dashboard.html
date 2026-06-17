@@ -112,9 +112,10 @@
 <div class="login-wrap" id="login-section">
   <div class="login-card">
     <h1>Dashboard Leader</h1>
-    <p>Masukkan email leader untuk akses</p>
+    <p>Masuk dengan email dan password leader</p>
     <input type="email" id="leader-email" placeholder="Email leader" />
-    <button class="btn-full" id="login-btn" onclick="leaderLogin()">Kirim Magic Link</button>
+    <input type="password" id="leader-password" placeholder="Password" />
+    <button class="btn-full" id="login-btn" onclick="leaderLogin()">Masuk</button>
     <p class="success-msg" id="login-msg"></p>
   </div>
 </div>
@@ -190,15 +191,26 @@ let miniCharts = {};
 
 async function leaderLogin() {
   const email = document.getElementById('leader-email').value.trim();
+  const password = document.getElementById('leader-password').value;
+  if (!email || !password) { alert('Masukkan email dan password dulu ya.'); return; }
   if (email !== LEADER_EMAIL) { alert('Email ini tidak terdaftar sebagai leader.'); return; }
-  document.getElementById('login-btn').textContent = 'Mengirim...';
+
+  document.getElementById('login-btn').textContent = 'Memproses...';
   document.getElementById('login-btn').disabled = true;
-  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: 'https://fajarzinfo-byte.github.io/evaluasi-host-senja/dashboard.html' } });
-  if (error) { alert('Error: ' + error.message); return; }
-  const msg = document.getElementById('login-msg');
-  msg.textContent = 'Magic link dikirim ke ' + email + ' — cek inbox!';
-  msg.style.display = 'block';
-  document.getElementById('login-btn').style.display = 'none';
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    const msg = document.getElementById('login-msg');
+    msg.textContent = 'Email atau password salah.';
+    msg.style.color = '#dc2626';
+    msg.style.display = 'block';
+    document.getElementById('login-btn').textContent = 'Masuk';
+    document.getElementById('login-btn').disabled = false;
+    return;
+  }
+
+  initApp();
 }
 
 async function loadData() {
@@ -444,12 +456,6 @@ async function initApp() {
     document.getElementById('login-section').style.display = 'flex';
   }
 }
-
-sb.auth.onAuthStateChange(async (event, session) => {
-  if (event === 'SIGNED_IN' && session && document.getElementById('app-section').style.display !== 'block') {
-    initApp();
-  }
-});
 
 initApp();
 </script>

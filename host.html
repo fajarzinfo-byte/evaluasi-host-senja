@@ -101,9 +101,10 @@
 <div class="login-wrap" id="login-section">
   <div class="login-card">
     <h1>Hasil Evaluasimu</h1>
-    <p>Masukkan email kamu untuk menerima link akses</p>
+    <p>Masuk dengan email dan password kamu</p>
     <input type="email" id="host-email-input" placeholder="Email kamu" />
-    <button class="btn-primary" id="send-btn" onclick="sendMagicLink()">Kirim Link Akses</button>
+    <input type="password" id="host-password-input" placeholder="Password" />
+    <button class="btn-primary" id="send-btn" onclick="hostLogin()">Masuk</button>
     <p class="success-msg" id="success-msg"></p>
   </div>
 </div>
@@ -160,18 +161,28 @@ const HOST_MAP = {
 
 let chartInstance = null;
 
-async function sendMagicLink() {
+async function hostLogin() {
   const email = document.getElementById('host-email-input').value.trim().toLowerCase();
-  if (!email) { alert('Masukkan email dulu ya.'); return; }
+  const password = document.getElementById('host-password-input').value;
+  if (!email || !password) { alert('Masukkan email dan password dulu ya.'); return; }
   if (!HOST_MAP[email]) { alert('Email ini tidak terdaftar sebagai host.'); return; }
-  document.getElementById('send-btn').textContent = 'Mengirim...';
+
+  document.getElementById('send-btn').textContent = 'Memproses...';
   document.getElementById('send-btn').disabled = true;
-  const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: 'https://fajarzinfo-byte.github.io/evaluasi-host-senja/host.html' } });
-  if (error) { alert('Error: ' + error.message); document.getElementById('send-btn').textContent = 'Kirim Link Akses'; document.getElementById('send-btn').disabled = false; return; }
-  const msg = document.getElementById('success-msg');
-  msg.textContent = 'Link akses dikirim ke ' + email + ' — cek inbox atau folder spam ya!';
-  msg.style.display = 'block';
-  document.getElementById('send-btn').style.display = 'none';
+
+  const { data, error } = await sb.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    const msg = document.getElementById('success-msg');
+    msg.textContent = 'Email atau password salah.';
+    msg.style.color = '#dc2626';
+    msg.style.display = 'block';
+    document.getElementById('send-btn').textContent = 'Masuk';
+    document.getElementById('send-btn').disabled = false;
+    return;
+  }
+
+  loadHostData(email);
 }
 
 async function loadHostData(email) {
@@ -302,10 +313,6 @@ async function init() {
   const { data: { session } } = await sb.auth.getSession();
   if (session) loadHostData(session.user.email.toLowerCase());
 }
-
-sb.auth.onAuthStateChange((event, session) => {
-  if (event === 'SIGNED_IN' && session) loadHostData(session.user.email.toLowerCase());
-});
 
 init();
 </script>
