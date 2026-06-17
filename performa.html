@@ -7,44 +7,52 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg:#f7f6f3; --surface:#fff; --surface2:#f2f1ee;
-    --border:#e4e2dc; --border2:#d0cec6;
-    --text:#1a1917; --text2:#6b6860; --text3:#a09e99;
-    --accent:#2563eb; --accentbg:#eff4ff;
+    --bg:#f6f4ef; --surface:#fff; --surface2:#f1ede6;
+    --border:#e7e2d9; --border2:#d4cdc0;
+    --text:#1c1a2e; --text2:#6b6678; --text3:#a8a2b0;
+    --accent:#6d28d9; --accentbg:#f3f0ff;
     --good:#16a34a; --goodbg:#f0fdf4; --goodbd:#bbf7d0;
     --warn:#d97706; --warnbg:#fffbeb; --warnbd:#fde68a;
     --bad:#dc2626; --badbg:#fef2f2; --badbd:#fecaca;
-    --r:10px; --rs:6px;
+    --twilight:linear-gradient(135deg,#312e81 0%,#6d28d9 45%,#f97316 100%);
+    --dusk:#1e1b3a;
+    --r:12px; --rs:8px;
   }
-  body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.6; min-height:100vh; }
+  body { font-family:'Plus Jakarta Sans', sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.6; min-height:100vh; }
 
   /* Login */
-  .login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1rem; }
-  .login-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:2rem 2.5rem; width:100%; max-width:380px; text-align:center; }
-  .login-card h1 { font-size:20px; font-weight:600; margin-bottom:6px; }
+  .login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1rem; background:var(--twilight); position:relative; overflow:hidden; }
+  .login-wrap::before { content:''; position:absolute; width:140%; height:60%; left:-20%; bottom:-10%; background:radial-gradient(ellipse at center, rgba(251,191,36,.35), transparent 70%); pointer-events:none; }
+  .login-card { background:rgba(255,255,255,.97); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.4); border-radius:20px; padding:2.5rem 2.5rem 2rem; width:100%; max-width:400px; text-align:center; box-shadow:0 20px 60px rgba(30,27,58,.4); position:relative; z-index:1; }
+  .brand-mark { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:1.5rem; }
+  .brand-dot { width:34px; height:34px; border-radius:50%; background:var(--twilight); box-shadow:0 2px 12px rgba(109,40,217,.4); flex-shrink:0; }
+  .brand-name { font-size:19px; font-weight:800; letter-spacing:-.02em; color:var(--text); }
+  .brand-name span { background:var(--twilight); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .login-card h1 { font-size:17px; font-weight:700; margin-bottom:4px; letter-spacing:-.01em; }
   .login-card p { font-size:13px; color:var(--text2); margin-bottom:1.5rem; }
-  .login-card input { width:100%; padding:10px 12px; border:1px solid var(--border2); border-radius:var(--rs); font-size:13px; margin-bottom:10px; font-family:'Inter',sans-serif; color:var(--text); outline:none; }
-  .login-card input:focus { border-color:var(--accent); }
-  .btn-primary { width:100%; padding:10px; background:var(--text); color:#fff; border:none; border-radius:var(--rs); font-size:13px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; }
-  .btn-primary:hover { background:#333; }
+  .login-card input { width:100%; padding:12px 14px; border:1px solid var(--border2); border-radius:10px; font-size:14px; margin-bottom:11px; font-family:'Plus Jakarta Sans', sans-serif; color:var(--text); outline:none; transition:border-color .15s, box-shadow .15s; }
+  .login-card input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accentbg); }
+  .btn-primary { width:100%; padding:12px; background:var(--twilight); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; font-family:'Plus Jakarta Sans', sans-serif; box-shadow:0 4px 14px rgba(109,40,217,.3); transition:transform .1s, box-shadow .15s; }
+  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(109,40,217,.4); }
   .msg { display:none; margin-top:12px; font-size:13px; }
 
   /* App shell */
   .app { display:none; max-width:920px; margin:0 auto; padding:1.5rem 1.5rem 4rem; }
   .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem; padding-bottom:1.2rem; border-bottom:1px solid var(--border); }
-  .topbar h1 { font-size:18px; font-weight:600; letter-spacing:-.02em; }
+  .topbar h1 { font-size:19px; font-weight:800; letter-spacing:-.02em; }
   .topbar p { font-size:13px; color:var(--text2); margin-top:2px; }
   .topbar-actions { display:flex; gap:8px; align-items:center; }
-  .btn-ghost { padding:6px 14px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); font-size:12px; cursor:pointer; font-family:'Inter',sans-serif; color:var(--text2); text-decoration:none; }
+  .btn-ghost { padding:6px 14px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); font-size:12px; cursor:pointer; font-family:'Plus Jakarta Sans', sans-serif; color:var(--text2); text-decoration:none; }
   .btn-ghost:hover { background:var(--surface2); }
 
   /* Tabs */
   .tabs { display:flex; gap:6px; margin-bottom:1.3rem; flex-wrap:wrap; }
-  .tab { padding:8px 18px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); font-size:13px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; color:var(--text2); }
-  .tab.active { background:var(--text); color:#fff; border-color:var(--text); }
+  .tab { padding:8px 18px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); font-size:13px; font-weight:600; cursor:pointer; font-family:'Plus Jakarta Sans', sans-serif; color:var(--text2); transition:.15s; }
+  .tab:hover { border-color:var(--accent); color:var(--accent); }
+  .tab.active { background:var(--twilight); color:#fff; border-color:transparent; box-shadow:0 2px 10px rgba(109,40,217,.3); }
   .panel { display:none; }
   .panel.active { display:block; }
 
@@ -54,7 +62,7 @@
   .fg { display:flex; flex-direction:column; }
   .fg.full { grid-column:1 / -1; }
   .fg label { font-size:11px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px; }
-  .fg input, .fg select { width:100%; padding:9px 12px; border:1px solid var(--border2); border-radius:var(--rs); font-size:13px; font-family:'Inter',sans-serif; color:var(--text); background:var(--surface); outline:none; }
+  .fg input, .fg select { width:100%; padding:9px 12px; border:1px solid var(--border2); border-radius:var(--rs); font-size:13px; font-family:'Plus Jakarta Sans', sans-serif; color:var(--text); background:var(--surface); outline:none; }
   .fg input:focus, .fg select:focus { border-color:var(--accent); }
   .group-label { font-size:12px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; margin:16px 0 4px; grid-column:1 / -1; }
   .group-label:first-child { margin-top:0; }
@@ -112,11 +120,11 @@
   .toast.show { opacity:1; transform:translateY(0); }
   .toast.success { background:var(--goodbg); border-color:var(--goodbd); color:var(--good); }
   .toast.error { background:var(--badbg); border-color:var(--badbd); color:var(--bad); }
-  .btn-accent { padding:10px 20px; background:var(--text); color:#fff; border:none; border-radius:var(--rs); font-size:13px; font-weight:500; cursor:pointer; font-family:'Inter',sans-serif; }
+  .btn-accent { padding:10px 20px; background:var(--text); color:#fff; border:none; border-radius:var(--rs); font-size:13px; font-weight:500; cursor:pointer; font-family:'Plus Jakarta Sans', sans-serif; }
   .btn-accent:hover { background:#333; }
   .btn-accent:disabled { opacity:.5; cursor:not-allowed; }
   .filter-row { display:flex; gap:10px; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
-  .filter-row select { padding:7px 10px; border:1px solid var(--border2); border-radius:var(--rs); font-size:13px; font-family:'Inter',sans-serif; color:var(--text); background:var(--surface); outline:none; }
+  .filter-row select { padding:7px 10px; border:1px solid var(--border2); border-radius:var(--rs); font-size:13px; font-family:'Plus Jakarta Sans', sans-serif; color:var(--text); background:var(--surface); outline:none; }
   .section-title { font-size:15px; font-weight:600; margin-bottom:1rem; }
 
   @media (max-width:600px){
@@ -130,7 +138,11 @@
 <!-- LOGIN -->
 <div class="login-wrap" id="login">
   <div class="login-card">
-    <h1>Performa Live</h1>
+    <div class="brand-mark">
+      <div class="brand-dot"></div>
+      <div class="brand-name">Senja <span>Studio</span></div>
+    </div>
+    <h1>Performa &amp; Evaluasi Host</h1>
     <p>Masuk dengan email &amp; password kamu</p>
     <input type="email" id="email" placeholder="Email" />
     <input type="password" id="pass" placeholder="Password" />
@@ -142,9 +154,12 @@
 <!-- APP -->
 <div class="app" id="app">
   <div class="topbar">
-    <div>
-      <h1 id="greeting">Performa Live</h1>
-      <p id="subtitle"></p>
+    <div style="display:flex;align-items:center;gap:11px">
+      <div class="brand-dot" style="width:30px;height:30px"></div>
+      <div>
+        <h1 id="greeting">Performa Live</h1>
+        <p id="subtitle"></p>
+      </div>
     </div>
     <div class="topbar-actions" id="topActions"></div>
   </div>
@@ -233,7 +248,6 @@ function initApp(email){
   document.getElementById('login').style.display='none';
   document.getElementById('app').style.display='block';
   document.getElementById('topActions').innerHTML =
-    `<a class="btn-ghost" href="https://tinyurl.com/host-senja">Evaluasi</a>`+
     `<button class="btn-ghost" onclick="sb.auth.signOut().then(()=>location.reload())">Keluar</button>`;
 
   if(ROLE==='leader') buildLeader();
@@ -281,7 +295,7 @@ function renderHome(){
   const lastDate = myData.length? myData[myData.length-1].tanggal : null;
 
   box.innerHTML = `
-    <div style="background:linear-gradient(135deg,#1a1917,#2d2b27);border-radius:14px;padding:24px;color:#fff;margin-bottom:1.3rem">
+    <div style="background:linear-gradient(135deg,#1e1b3a 0%,#4c2889 50%,#9a3412 100%);border-radius:16px;padding:26px;color:#fff;margin-bottom:1.3rem;box-shadow:0 8px 30px rgba(30,27,58,.25);position:relative;overflow:hidden">
       <div style="font-size:12px;color:#a09e99;text-transform:uppercase;letter-spacing:.05em">GMV Bulan Ini — ${monthName}</div>
       <div style="font-size:34px;font-weight:600;letter-spacing:-.02em;margin:6px 0">${rp(tot.gmv)}</div>
       <div style="display:flex;gap:20px;font-size:13px;color:#d0cec6;flex-wrap:wrap">
@@ -292,7 +306,7 @@ function renderHome(){
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
       <div class="menu-card" onclick="goTab('p-input',1)">
-        <div class="menu-ic" style="background:#eff4ff;color:#2563eb">✏️</div>
+        <div class="menu-ic" style="background:#f3f0ff;color:#6d28d9">✏️</div>
         <div class="menu-t">Input Data Performa</div>
         <div class="menu-s">Isi data tiap sesi live kamu</div>
       </div>
@@ -487,13 +501,13 @@ function renderPerfBody(ctx, allData, label, month){
   // GMV trend
   charts.gmv = new Chart(document.getElementById('chGmv_'+ctx),{type:'line',data:{
     labels:data.map((r,i)=>fmtTgl(r.tanggal)+' S'+r.sesi),
-    datasets:[{data:data.map(r=>+r.gmv||0),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.08)',tension:.3,pointRadius:2,fill:true}]
+    datasets:[{data:data.map(r=>+r.gmv||0),borderColor:'#6d28d9',backgroundColor:'rgba(109,40,217,.08)',tension:.3,pointRadius:2,fill:true}]
   },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'#f2f1ee'}}}}});
   // Avg per sesi
   const bySesi=[1,2,3,4].map(s=>{const ss=data.filter(r=>+r.sesi===s);return ss.length? ss.reduce((a,r)=>a+(+r.gmv||0),0)/ss.length : 0;});
   charts.sesi = new Chart(document.getElementById('chSesi_'+ctx),{type:'bar',data:{
     labels:['Sesi 1','Sesi 2','Sesi 3','Sesi 4'],
-    datasets:[{data:bySesi,backgroundColor:['#93c5fd','#60a5fa','#3b82f6','#2563eb'],borderRadius:5}]
+    datasets:[{data:bySesi,backgroundColor:['#93c5fd','#60a5fa','#3b82f6','#6d28d9'],borderRadius:5}]
   },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'#f2f1ee'}},x:{grid:{display:false}}}}});
 }
 
@@ -541,7 +555,7 @@ function renderLeaderHome(){
   });
 
   box.innerHTML=`
-    <div style="background:linear-gradient(135deg,#1a1917,#2d2b27);border-radius:14px;padding:24px;color:#fff;margin-bottom:1.3rem">
+    <div style="background:linear-gradient(135deg,#1e1b3a 0%,#4c2889 50%,#9a3412 100%);border-radius:16px;padding:26px;color:#fff;margin-bottom:1.3rem;box-shadow:0 8px 30px rgba(30,27,58,.25);position:relative;overflow:hidden">
       <div style="font-size:12px;color:#a09e99;text-transform:uppercase;letter-spacing:.05em">Total GMV Tim — ${monthName}</div>
       <div style="font-size:34px;font-weight:600;letter-spacing:-.02em;margin:6px 0">${rp(tot.gmv)}</div>
       <div style="display:flex;gap:20px;font-size:13px;color:#d0cec6;flex-wrap:wrap">
@@ -563,7 +577,7 @@ function renderLeaderHome(){
         <div class="menu-s">Nilai host (17 poin / 6 kategori)</div>
       </a>
       <a class="menu-card" href="https://tinyurl.com/dashboard-senja" style="text-decoration:none;color:inherit">
-        <div class="menu-ic" style="background:#eff4ff;color:#2563eb">📋</div>
+        <div class="menu-ic" style="background:#f3f0ff;color:#6d28d9">📋</div>
         <div class="menu-t">Dashboard Evaluasi</div>
         <div class="menu-s">Pantau skor & progress semua host</div>
       </a>

@@ -8,28 +8,34 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #f7f6f3; --surface: #ffffff; --surface2: #f2f1ee;
-    --border: #e4e2dc; --border2: #d0cec6;
-    --text: #1a1917; --text2: #6b6860; --text3: #a09e99;
-    --accent: #2563eb; --accent-bg: #eff4ff;
+    --bg: #f6f4ef; --surface: #ffffff; --surface2: #f1ede6;
+    --border: #e7e2d9; --border2: #d4cdc0;
+    --text: #1c1a2e; --text2: #6b6678; --text3: #a8a2b0;
+    --accent: #6d28d9; --accent-bg: #f3f0ff;
     --good: #16a34a; --good-bg: #f0fdf4; --good-border: #bbf7d0;
     --warn: #d97706; --warn-bg: #fffbeb; --warn-border: #fde68a;
     --bad: #dc2626; --bad-bg: #fef2f2; --bad-border: #fecaca;
     --radius: 10px; --radius-sm: 6px;
   }
-  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
 
   /* Login */
-  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
-  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem 2.5rem; width: 100%; max-width: 380px; text-align: center; }
-  .login-card h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding:1rem; background:linear-gradient(135deg,#312e81 0%,#6d28d9 45%,#f97316 100%); position:relative; overflow:hidden; }
+  .login-wrap::before { content:''; position:absolute; width:140%; height:60%; left:-20%; bottom:-10%; background:radial-gradient(ellipse at center, rgba(251,191,36,.35), transparent 70%); pointer-events:none; }
+  .login-card { background: rgba(255,255,255,.97); backdrop-filter:blur(10px); border: 1px solid rgba(255,255,255,.4); border-radius: 20px; padding: 2.5rem 2.5rem 2rem; width: 100%; max-width: 400px; text-align: center; box-shadow:0 20px 60px rgba(30,27,58,.4); position:relative; z-index:1; }
+  .brand-mark { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:1.5rem; }
+  .brand-dot { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#312e81,#6d28d9 45%,#f97316); box-shadow:0 2px 12px rgba(109,40,217,.4); flex-shrink:0; }
+  .brand-name { font-size:19px; font-weight:800; letter-spacing:-.02em; color:var(--text); }
+  .brand-name span { background:linear-gradient(135deg,#6d28d9,#f97316); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .login-card h1 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
   .login-card p { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; }
-  .login-card input { width: 100%; padding: 10px 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 10px; font-family: 'Inter', sans-serif; color: var(--text); outline: none; }
-  .login-card input:focus { border-color: var(--accent); }
-  .btn-full { width: 100%; padding: 10px; background: var(--text); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; }
+  .login-card input { width: 100%; padding: 12px 14px; border: 1px solid var(--border2); border-radius: 10px; font-size: 14px; margin-bottom: 11px; font-family: 'Plus Jakarta Sans', sans-serif; color: var(--text); outline: none; transition:border-color .15s, box-shadow .15s; }
+  .login-card input:focus { border-color: var(--accent); box-shadow:0 0 0 3px var(--accent-bg); }
+  .btn-full { width: 100%; padding: 12px; background: linear-gradient(135deg,#312e81,#6d28d9 45%,#f97316); color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; box-shadow:0 4px 14px rgba(109,40,217,.3); transition:transform .1s; }
+  .btn-full:hover { transform:translateY(-1px); }
   .success-msg { display: none; margin-top: 12px; font-size: 13px; color: var(--good); }
 
   /* App */
@@ -38,7 +44,7 @@
   .page-header h1 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
   .page-header p { font-size: 13px; color: var(--text2); margin-top: 2px; }
   .header-actions { display: flex; gap: 8px; align-items: center; }
-  .btn { padding: 7px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--surface); font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; color: var(--text); }
+  .btn { padding: 7px 14px; border-radius: var(--radius-sm); border: 1px solid var(--border2); background: var(--surface); font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; color: var(--text); }
   .btn:hover { background: var(--surface2); }
   .btn-accent { background: var(--text); color: #fff; border-color: var(--text); }
   .btn-accent:hover { background: #333; }
@@ -55,7 +61,7 @@
 
   /* Brand tabs */
   .brand-tabs { display: flex; gap: 6px; margin-bottom: 1.5rem; flex-wrap: wrap; }
-  .tab { padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border2); background: var(--surface); font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; color: var(--text2); }
+  .tab { padding: 6px 16px; border-radius: 20px; border: 1px solid var(--border2); background: var(--surface); font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; color: var(--text2); }
   .tab.active { background: var(--text); color: #fff; border-color: var(--text); }
 
   /* Host grid */
@@ -83,7 +89,7 @@
   /* Month filter */
   .filter-row { display: flex; gap: 10px; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
   .filter-row label { font-size: 13px; color: var(--text2); }
-  .filter-row select, .filter-row input { padding: 7px 10px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; font-family: 'Inter', sans-serif; color: var(--text); background: var(--surface); outline: none; }
+  .filter-row select, .filter-row input { padding: 7px 10px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; font-family: 'Plus Jakarta Sans', sans-serif; color: var(--text); background: var(--surface); outline: none; }
 
   /* Detail modal */
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 100; align-items: center; justify-content: center; padding: 1rem; }
@@ -109,24 +115,25 @@
 </head>
 <body>
 
-<div class="login-wrap" id="login-section">
+<div class="login-wrap" id="login-section" style="display:none">
   <div class="login-card">
-    <h1>Dashboard Leader</h1>
-    <p>Masuk dengan email dan password leader</p>
-    <input type="email" id="leader-email" placeholder="Email leader" />
-    <input type="password" id="leader-password" placeholder="Password" />
-    <button class="btn-full" id="login-btn" onclick="leaderLogin()">Masuk</button>
-    <p class="success-msg" id="login-msg"></p>
+    <div class="brand-mark"><div class="brand-dot"></div><div class="brand-name">Senja <span>Studio</span></div></div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:1rem">Mengarahkan ke halaman login…</p>
+    <a class="btn-full" href="https://tinyurl.com/performa-senja" style="display:block;text-align:center;text-decoration:none">Ke Beranda</a>
   </div>
 </div>
 
 <div class="app-wrap" id="app-section">
   <div class="page-header">
-    <div>
-      <h1>Dashboard Evaluasi Host</h1>
-      <p id="last-updated">Memuat data...</p>
+    <div style="display:flex;align-items:center;gap:11px">
+      <div class="brand-dot" style="width:30px;height:30px"></div>
+      <div>
+        <h1>Dashboard Evaluasi Host</h1>
+        <p id="last-updated">Memuat data...</p>
+      </div>
     </div>
     <div class="header-actions">
+      <a href="https://tinyurl.com/performa-senja" style="text-decoration:none"><button class="btn">← Beranda</button></a>
       <a href="https://tinyurl.com/leader-senja" style="text-decoration:none"><button class="btn">+ Input Evaluasi</button></a>
       <button class="btn btn-accent" onclick="exportPDF()">Export PDF</button>
       <button class="btn btn-logout" onclick="sb.auth.signOut().then(()=>location.reload())">Keluar</button>
@@ -188,30 +195,6 @@ const HOST_LIST = [
 let allData = [];
 let activeBrand = '';
 let miniCharts = {};
-
-async function leaderLogin() {
-  const email = document.getElementById('leader-email').value.trim();
-  const password = document.getElementById('leader-password').value;
-  if (!email || !password) { alert('Masukkan email dan password dulu ya.'); return; }
-  if (email !== LEADER_EMAIL) { alert('Email ini tidak terdaftar sebagai leader.'); return; }
-
-  document.getElementById('login-btn').textContent = 'Memproses...';
-  document.getElementById('login-btn').disabled = true;
-
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    const msg = document.getElementById('login-msg');
-    msg.textContent = 'Email atau password salah.';
-    msg.style.color = '#dc2626';
-    msg.style.display = 'block';
-    document.getElementById('login-btn').textContent = 'Masuk';
-    document.getElementById('login-btn').disabled = false;
-    return;
-  }
-
-  initApp();
-}
 
 async function loadData() {
   const { data, error } = await sb.from('evaluasi_host').select('*').order('created_at', { ascending: true });
@@ -447,13 +430,16 @@ async function initApp() {
     if (session.user.email !== LEADER_EMAIL) {
       alert('Akun ini tidak memiliki akses leader.');
       await sb.auth.signOut();
+      window.location.href = 'https://tinyurl.com/performa-senja';
       return;
     }
     document.getElementById('login-section').style.display = 'none';
     document.getElementById('app-section').style.display = 'block';
     await loadData();
   } else {
+    // Login terpusat di Beranda — tampilkan layar pengalihan lalu arahkan
     document.getElementById('login-section').style.display = 'flex';
+    window.location.href = 'https://tinyurl.com/performa-senja';
   }
 }
 

@@ -5,21 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Evaluasi Host Live — Scoring Sheet</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   :root {
-    --bg: #f7f6f3;
+    --bg: #f6f4ef;
     --surface: #ffffff;
-    --surface2: #f2f1ee;
-    --border: #e4e2dc;
-    --border2: #d0cec6;
-    --text: #1a1917;
-    --text2: #6b6860;
-    --text3: #a09e99;
-    --accent: #2563eb;
-    --accent-bg: #eff4ff;
+    --surface2: #f1ede6;
+    --border: #e7e2d9;
+    --border2: #d4cdc0;
+    --text: #1c1a2e;
+    --text2: #6b6678;
+    --text3: #a8a2b0;
+    --accent: #6d28d9;
+    --accent-bg: #f3f0ff;
     --good: #16a34a;
     --good-bg: #f0fdf4;
     --good-border: #bbf7d0;
@@ -36,7 +36,7 @@
   }
 
   body {
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     background: var(--bg);
     color: var(--text);
     font-size: 14px;
@@ -102,7 +102,7 @@
     border: 1px solid var(--border2);
     border-radius: var(--radius-sm);
     background: var(--surface);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 13px;
     color: var(--text);
     outline: none;
@@ -187,7 +187,7 @@
     align-items: center;
     justify-content: center;
     color: var(--text3);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
   .star:hover { border-color: var(--star-on); background: #fef3c7; color: var(--star-on); }
   .star.on { background: var(--star-on); border-color: var(--star-on); color: #fff; }
@@ -202,7 +202,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius-sm);
     padding: 8px 12px;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 12px;
     color: var(--text2);
     background: var(--bg);
@@ -290,7 +290,7 @@
     border: 1px solid var(--border2);
     border-radius: var(--radius-sm);
     padding: 10px 12px;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 13px;
     color: var(--text);
     background: var(--bg);
@@ -311,7 +311,7 @@
   .btn {
     padding: 9px 18px;
     border-radius: var(--radius-sm);
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;
@@ -393,7 +393,7 @@
     border: 1px solid var(--border2);
     background: var(--surface2);
     cursor: pointer;
-    font-family: 'Inter', sans-serif;
+    font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 500;
     color: var(--text2);
     transition: background .1s;
@@ -430,15 +430,16 @@
 </style>
 </head>
 <body>
-<!-- Login Wall -->
-<div id="login-wall" style="display:none;min-height:100vh;align-items:center;justify-content:center;background:#f7f6f3;">
-  <div style="background:#fff;border:1px solid #e4e2dc;border-radius:12px;padding:2rem 2.5rem;width:100%;max-width:360px;text-align:center;">
-    <h2 style="font-size:18px;font-weight:600;margin-bottom:6px;color:#1a1917">Leader Login</h2>
-    <p style="font-size:13px;color:#6b6860;margin-bottom:1.5rem">Masuk dengan email dan password leader</p>
-    <input type="email" id="leader-email" placeholder="Email kamu" style="width:100%;padding:9px 12px;border:1px solid #d0cec6;border-radius:8px;font-size:13px;margin-bottom:10px;box-sizing:border-box;font-family:Inter,sans-serif;" />
-    <input type="password" id="leader-password" placeholder="Password" style="width:100%;padding:9px 12px;border:1px solid #d0cec6;border-radius:8px;font-size:13px;margin-bottom:10px;box-sizing:border-box;font-family:Inter,sans-serif;" />
-    <button id="login-btn" onclick="leaderLogin()" style="width:100%;padding:10px;background:#1a1917;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;font-family:Inter,sans-serif;">Masuk</button>
-    <p id="login-msg" style="display:none;margin-top:12px;font-size:13px;"></p>
+<!-- Login Wall (redirect ke Beranda) -->
+<div id="login-wall" style="display:none;min-height:100vh;align-items:center;justify-content:center;padding:1rem;background:linear-gradient(135deg,#312e81 0%,#6d28d9 45%,#f97316 100%);position:relative;overflow:hidden;">
+  <div style="position:absolute;width:140%;height:60%;left:-20%;bottom:-10%;background:radial-gradient(ellipse at center, rgba(251,191,36,.35), transparent 70%);pointer-events:none;"></div>
+  <div style="background:rgba(255,255,255,.97);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.4);border-radius:20px;padding:2.5rem;width:100%;max-width:400px;text-align:center;box-shadow:0 20px 60px rgba(30,27,58,.4);position:relative;z-index:1;">
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:1.2rem;">
+      <div style="width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#312e81,#6d28d9 45%,#f97316);box-shadow:0 2px 12px rgba(109,40,217,.4);"></div>
+      <div style="font-size:19px;font-weight:800;letter-spacing:-.02em;color:#1c1a2e;">Senja <span style="background:linear-gradient(135deg,#6d28d9,#f97316);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">Studio</span></div>
+    </div>
+    <p style="font-size:13px;color:#6b6678;margin-bottom:1rem">Mengarahkan ke halaman login…</p>
+    <a href="https://tinyurl.com/performa-senja" style="display:block;width:100%;padding:12px;background:linear-gradient(135deg,#312e81,#6d28d9 45%,#f97316);color:#fff;border-radius:10px;font-size:14px;font-weight:600;text-decoration:none;font-family:'Plus Jakarta Sans',sans-serif;box-shadow:0 4px 14px rgba(109,40,217,.3);box-sizing:border-box;">Ke Beranda</a>
   </div>
 </div>
 
@@ -447,13 +448,17 @@
 <div class="page">
 
   <div class="page-header">
-    <div>
-      <h1>Evaluasi host — one-on-one</h1>
-      <p>Scoring sheet untuk sesi coaching host live streaming</p>
+    <div style="display:flex;align-items:center;gap:11px">
+      <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,#312e81,#6d28d9 45%,#f97316);box-shadow:0 2px 12px rgba(109,40,217,.3);flex-shrink:0;"></div>
+      <div>
+        <h1>Evaluasi host — one-on-one</h1>
+        <p>Scoring sheet untuk sesi coaching host live streaming</p>
+      </div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <a href="https://tinyurl.com/dashboard-senja" style="padding:5px 12px;border-radius:20px;border:1px solid #d0cec6;background:#fff;font-size:12px;text-decoration:none;font-family:Inter,sans-serif;color:#2563eb;font-weight:500;">Dashboard</a>
-      <button onclick="sb.auth.signOut().then(()=>location.reload())" style="padding:5px 12px;border-radius:20px;border:1px solid #d0cec6;background:#fff;font-size:12px;cursor:pointer;font-family:Inter,sans-serif;color:#6b6860;">Keluar</button>
+      <a href="https://tinyurl.com/performa-senja" style="padding:5px 12px;border-radius:20px;border:1px solid #d4cdc0;background:#fff;font-size:12px;text-decoration:none;font-family:'Plus Jakarta Sans',sans-serif;color:#6b6678;font-weight:600;">← Beranda</a>
+      <a href="https://tinyurl.com/dashboard-senja" style="padding:5px 12px;border-radius:20px;border:1px solid #d4cdc0;background:#fff;font-size:12px;text-decoration:none;font-family:'Plus Jakarta Sans',sans-serif;color:#6d28d9;font-weight:600;">Dashboard</a>
+      <button onclick="sb.auth.signOut().then(()=>location.reload())" style="padding:5px 12px;border-radius:20px;border:1px solid #d4cdc0;background:#fff;font-size:12px;cursor:pointer;font-family:'Plus Jakarta Sans',sans-serif;color:#6b6678;">Keluar</button>
     </div>
   </div>
 
@@ -461,7 +466,7 @@
   <div class="meta-grid">
     <div class="field">
       <label>Brand</label>
-      <select id="brand" onchange="updateHostOptions()" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);font-family:Inter,sans-serif;font-size:13px;color:var(--text);outline:none;">
+      <select id="brand" onchange="updateHostOptions()" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);outline:none;">
         <option value="">Pilih brand</option>
         <option value="Onebear">Onebear</option>
         <option value="Supoe">Supoe</option>
@@ -470,7 +475,7 @@
     </div>
     <div class="field">
       <label>Nama host</label>
-      <select id="host-name" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);font-family:Inter,sans-serif;font-size:13px;color:var(--text);outline:none;">
+      <select id="host-name" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);outline:none;">
         <option value="">Pilih brand dulu</option>
       </select>
     </div>
@@ -536,7 +541,7 @@
     <div class="history-header">
       <h2>Riwayat evaluasi</h2>
       <div style="display:flex;gap:8px;align-items:center;">
-        <select id="brand-filter" onchange="renderHistory()" style="padding:5px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:Inter,sans-serif;font-size:12px;color:var(--text2);background:var(--surface);outline:none;">
+        <select id="brand-filter" onchange="renderHistory()" style="padding:5px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:var(--text2);background:var(--surface);outline:none;">
           <option value="">Semua brand</option>
           <option value="Onebear">Onebear</option>
           <option value="Supoe">Supoe</option>
@@ -977,7 +982,7 @@ async function initApp() {
   if (session) {
     if (session.user.email !== LEADER_EMAIL) {
       document.body.innerHTML = `
-        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:Inter,sans-serif;background:var(--bg,#f7f6f3)">
+        <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg,#f7f6f3)">
           <div style="text-align:center;padding:2rem">
             <p style="font-size:15px;color:#6b6860;margin-bottom:16px">Akun ini tidak memiliki akses leader.</p>
             <button onclick="sb.auth.signOut().then(()=>location.reload())" style="padding:9px 18px;border-radius:8px;border:1px solid #d0cec6;background:#fff;cursor:pointer;font-size:13px">Keluar</button>
@@ -991,39 +996,9 @@ async function initApp() {
     buildUI();
     fetchSessions();
   } else {
-    document.getElementById('login-wall').style.display = 'flex';
-    document.getElementById('main-app').style.display = 'none';
+    // Login terpusat di Beranda — arahkan ke sana
+    window.location.href = 'https://tinyurl.com/performa-senja';
   }
-}
-
-async function leaderLogin() {
-  const email = document.getElementById('leader-email').value.trim();
-  const password = document.getElementById('leader-password').value;
-  if (!email || !password) { alert('Masukkan email dan password dulu ya.'); return; }
-
-  document.getElementById('login-btn').textContent = 'Memproses...';
-  document.getElementById('login-btn').disabled = true;
-
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    document.getElementById('login-msg').textContent = 'Email atau password salah.';
-    document.getElementById('login-msg').style.color = '#dc2626';
-    document.getElementById('login-msg').style.display = 'block';
-    document.getElementById('login-btn').textContent = 'Masuk';
-    document.getElementById('login-btn').disabled = false;
-    return;
-  }
-
-  if (data.user.email !== LEADER_EMAIL) {
-    alert('Akun ini tidak memiliki akses leader.');
-    await sb.auth.signOut();
-    document.getElementById('login-btn').textContent = 'Masuk';
-    document.getElementById('login-btn').disabled = false;
-    return;
-  }
-
-  initApp();
 }
 
 initApp();

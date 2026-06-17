@@ -6,35 +6,40 @@
 <title>Hasil Evaluasi — Host</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    --bg: #f7f6f3; --surface: #ffffff; --surface2: #f2f1ee;
-    --border: #e4e2dc; --border2: #d0cec6;
-    --text: #1a1917; --text2: #6b6860; --text3: #a09e99;
-    --accent: #2563eb; --accent-bg: #eff4ff;
+    --bg: #f6f4ef; --surface: #ffffff; --surface2: #f1ede6;
+    --border: #e7e2d9; --border2: #d4cdc0;
+    --text: #1c1a2e; --text2: #6b6678; --text3: #a8a2b0;
+    --accent: #6d28d9; --accent-bg: #f3f0ff;
     --good: #16a34a; --good-bg: #f0fdf4; --good-border: #bbf7d0;
     --warn: #d97706; --warn-bg: #fffbeb; --warn-border: #fde68a;
     --bad: #dc2626; --bad-bg: #fef2f2; --bad-border: #fecaca;
     --radius: 10px; --radius-sm: 6px;
   }
-  body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
+  body { font-family: 'Plus Jakarta Sans', sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; min-height: 100vh; }
 
-  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
-  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem 2.5rem; width: 100%; max-width: 380px; text-align: center; }
-  .login-card h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; background:linear-gradient(135deg,#312e81 0%,#6d28d9 45%,#f97316 100%); position:relative; overflow:hidden; }
+  .login-wrap::before { content:''; position:absolute; width:140%; height:60%; left:-20%; bottom:-10%; background:radial-gradient(ellipse at center, rgba(251,191,36,.35), transparent 70%); pointer-events:none; }
+  .login-card { background: rgba(255,255,255,.97); backdrop-filter:blur(10px); border: 1px solid rgba(255,255,255,.4); border-radius: 20px; padding: 2.5rem 2.5rem 2rem; width: 100%; max-width: 400px; text-align: center; box-shadow:0 20px 60px rgba(30,27,58,.4); position:relative; z-index:1; }
+  .brand-mark { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:1.5rem; }
+  .brand-dot { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,#312e81,#6d28d9 45%,#f97316); box-shadow:0 2px 12px rgba(109,40,217,.4); flex-shrink:0; }
+  .brand-name { font-size:19px; font-weight:800; letter-spacing:-.02em; color:var(--text); }
+  .brand-name span { background:linear-gradient(135deg,#6d28d9,#f97316); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+  .login-card h1 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
   .login-card p { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; }
-  .login-card input { width: 100%; padding: 10px 12px; border: 1px solid var(--border2); border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 10px; font-family: 'Inter', sans-serif; color: var(--text); outline: none; }
-  .login-card input:focus { border-color: var(--accent); }
-  .btn-primary { width: 100%; padding: 10px; background: var(--text); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; }
-  .btn-primary:hover { background: #333; }
+  .login-card input { width: 100%; padding: 12px 14px; border: 1px solid var(--border2); border-radius: 10px; font-size: 14px; margin-bottom: 11px; font-family: 'Plus Jakarta Sans', sans-serif; color: var(--text); outline: none; transition:border-color .15s, box-shadow .15s; }
+  .login-card input:focus { border-color: var(--accent); box-shadow:0 0 0 3px var(--accent-bg); }
+  .btn-primary { width: 100%; padding: 12px; background: linear-gradient(135deg,#312e81,#6d28d9 45%,#f97316); color: #fff; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; box-shadow:0 4px 14px rgba(109,40,217,.3); transition:transform .1s, box-shadow .15s; }
+  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(109,40,217,.4); }
   .success-msg { display: none; margin-top: 12px; font-size: 13px; color: var(--good); line-height: 1.5; }
 
   .app-wrap { display: none; max-width: 680px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
   .app-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
   .app-header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; }
   .app-header p { font-size: 13px; color: var(--text2); margin-top: 2px; }
-  .btn-logout { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border2); background: var(--surface); font-size: 12px; cursor: pointer; font-family: 'Inter', sans-serif; color: var(--text2); }
+  .btn-logout { padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border2); background: var(--surface); font-size: 12px; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; color: var(--text2); }
 
   .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
   .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; text-align: center; }
@@ -48,7 +53,7 @@
   .target-box { background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 1.5rem; }
   .target-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--warn); margin-bottom: 6px; }
   .target-text { font-size: 13px; color: var(--text); margin-bottom: 10px; }
-  .btn-ack { padding: 7px 16px; border-radius: var(--radius-sm); border: 1px solid var(--warn-border); background: var(--surface); font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Inter', sans-serif; color: var(--warn); }
+  .btn-ack { padding: 7px 16px; border-radius: var(--radius-sm); border: 1px solid var(--warn-border); background: var(--surface); font-size: 12px; font-weight: 500; cursor: pointer; font-family: 'Plus Jakarta Sans', sans-serif; color: var(--warn); }
   .btn-ack:hover { background: var(--warn-bg); }
   .ack-done { font-size: 12px; color: var(--good); font-weight: 500; }
 
@@ -98,24 +103,27 @@
 </head>
 <body>
 
-<div class="login-wrap" id="login-section">
+<div class="login-wrap" id="login-section" style="display:none">
   <div class="login-card">
-    <h1>Hasil Evaluasimu</h1>
-    <p>Masuk dengan email dan password kamu</p>
-    <input type="email" id="host-email-input" placeholder="Email kamu" />
-    <input type="password" id="host-password-input" placeholder="Password" />
-    <button class="btn-primary" id="send-btn" onclick="hostLogin()">Masuk</button>
-    <p class="success-msg" id="success-msg"></p>
+    <div class="brand-mark"><div class="brand-dot"></div><div class="brand-name">Senja <span>Studio</span></div></div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:1rem">Mengarahkan ke halaman login…</p>
+    <a class="btn-primary" href="https://tinyurl.com/performa-senja" style="display:block;text-align:center;text-decoration:none">Ke Beranda</a>
   </div>
 </div>
 
 <div class="app-wrap" id="app-section">
   <div class="app-header">
-    <div>
-      <h1 id="host-greeting">Halo!</h1>
-      <p id="host-brand"></p>
+    <div style="display:flex;align-items:center;gap:11px">
+      <div class="brand-dot" style="width:30px;height:30px"></div>
+      <div>
+        <h1 id="host-greeting">Halo!</h1>
+        <p id="host-brand"></p>
+      </div>
     </div>
-    <button class="btn-logout" onclick="logout()">Keluar</button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <a class="btn-logout" href="https://tinyurl.com/performa-senja" style="text-decoration:none">← Beranda</a>
+      <button class="btn-logout" onclick="logout()">Keluar</button>
+    </div>
   </div>
 
   <div class="stats-grid">
@@ -160,30 +168,6 @@ const HOST_MAP = {
 };
 
 let chartInstance = null;
-
-async function hostLogin() {
-  const email = document.getElementById('host-email-input').value.trim().toLowerCase();
-  const password = document.getElementById('host-password-input').value;
-  if (!email || !password) { alert('Masukkan email dan password dulu ya.'); return; }
-  if (!HOST_MAP[email]) { alert('Email ini tidak terdaftar sebagai host.'); return; }
-
-  document.getElementById('send-btn').textContent = 'Memproses...';
-  document.getElementById('send-btn').disabled = true;
-
-  const { data, error } = await sb.auth.signInWithPassword({ email, password });
-
-  if (error) {
-    const msg = document.getElementById('success-msg');
-    msg.textContent = 'Email atau password salah.';
-    msg.style.color = '#dc2626';
-    msg.style.display = 'block';
-    document.getElementById('send-btn').textContent = 'Masuk';
-    document.getElementById('send-btn').disabled = false;
-    return;
-  }
-
-  loadHostData(email);
-}
 
 async function loadHostData(email) {
   const hostInfo = HOST_MAP[email];
@@ -239,10 +223,10 @@ async function loadHostData(email) {
         datasets: [{
           label: 'Rata-rata',
           data: scores,
-          borderColor: '#2563eb',
-          backgroundColor: 'rgba(37,99,235,0.08)',
+          borderColor: '#6d28d9',
+          backgroundColor: 'rgba(109,40,217,0.08)',
           tension: 0.3,
-          pointBackgroundColor: '#2563eb',
+          pointBackgroundColor: '#6d28d9',
           pointRadius: 5,
           fill: true,
         }]
@@ -311,7 +295,13 @@ async function logout() { await sb.auth.signOut(); location.reload(); }
 
 async function init() {
   const { data: { session } } = await sb.auth.getSession();
-  if (session) loadHostData(session.user.email.toLowerCase());
+  if (session) {
+    loadHostData(session.user.email.toLowerCase());
+  } else {
+    // Login terpusat di Beranda — tampilkan layar pengalihan lalu arahkan
+    document.getElementById('login-section').style.display = 'flex';
+    window.location.href = 'https://tinyurl.com/performa-senja';
+  }
 }
 
 init();
