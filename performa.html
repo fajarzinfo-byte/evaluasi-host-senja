@@ -5,9 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Performa Live — Host</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>window.Chart&&(Chart.defaults.color='#b0aacb',Chart.defaults.borderColor='rgba(255,255,255,.07)',Chart.defaults.font.family="'Plus Jakarta Sans',sans-serif");</script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg:#f6f4ef; --surface:#fff; --surface2:#f1ede6;
@@ -131,6 +132,55 @@
     .form-grid{grid-template-columns:1fr;} .stats{grid-template-columns:1fr 1fr;}
     .calc-row{grid-template-columns:1fr;}
   }
+
+  /* ════════ SENJA — DUSK THEME (langit malam, sisa cahaya jingga di horizon) ════════ */
+  :root{
+    --bg:#0d0c17; --surface:#17152a; --surface2:#211e3a;
+    --border:#2a2742; --border2:#3a3658;
+    --text:#f1eefb; --text2:#b0aacb; --text3:#76709a;
+    --accent:#a78bfa; --accent-bg:rgba(167,139,250,.13); --accentbg:rgba(167,139,250,.13);
+    --good:#4ade80; --good-bg:rgba(74,222,128,.13); --goodbg:rgba(74,222,128,.13);
+    --good-border:rgba(74,222,128,.32); --goodbd:rgba(74,222,128,.32);
+    --warn:#fbbf24; --warn-bg:rgba(251,191,36,.13); --warnbg:rgba(251,191,36,.13);
+    --warn-border:rgba(251,191,36,.32); --warnbd:rgba(251,191,36,.32);
+    --bad:#fb7185; --bad-bg:rgba(251,113,133,.13); --badbg:rgba(251,113,133,.13);
+    --bad-border:rgba(251,113,133,.32); --badbd:rgba(251,113,133,.32);
+    --star-on:#fbbf24; --star-off:#272343;
+    --twilight:linear-gradient(135deg,#3b2f9e 0%,#6d28d9 45%,#f97316 100%);
+    --dusk:#17152a;
+  }
+  html{ color-scheme:dark; scrollbar-color:#322e4e transparent; }
+  body{ background:
+    radial-gradient(1100px 480px at 88% -8%, rgba(109,40,217,.16), transparent 60%),
+    radial-gradient(900px 420px at 6% 4%, rgba(249,115,22,.07), transparent 55%),
+    var(--bg); background-attachment:fixed; }
+  ::selection{ background:rgba(167,139,250,.35); color:#fff; }
+  ::-webkit-scrollbar{ width:11px; height:11px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:#322e4e; border-radius:9px; border:3px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover{ background:#473f6b; }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+  /* numeric signature face — uang & skor yang paling sering dilihat tim */
+  .brand-name,.hero-num,.stat-v,.stat-value,.host-score,.eval-score,.section-avg,.calc-v{
+    font-family:'Space Grotesk','Plus Jakarta Sans',sans-serif; font-feature-settings:'tnum' 1; }
+  /* login jadi kaca gelap di atas horizon senja */
+  .login-card{ background:rgba(20,18,38,.66)!important; border:1px solid rgba(167,139,250,.22)!important;
+    box-shadow:0 26px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05)!important; }
+  .login-card input{ background:rgba(10,9,20,.55); }
+  .login-card input::placeholder{ color:var(--text3); }
+  .login-wrap::before{ opacity:.85; }
+  /* tombol aksi pakai gradient senja (sebelumnya pakai --text yang kini terang) */
+  .btn-accent{ background:var(--twilight)!important; color:#fff!important; border:none!important;
+    box-shadow:0 6px 18px rgba(109,40,217,.32); }
+  .btn-accent:hover{ filter:brightness(1.08); transform:translateY(-1px); }
+  @media (prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important; } }
+
+  .hero{ box-shadow:0 14px 40px rgba(0,0,0,.45)!important; border:1px solid rgba(167,139,250,.18)!important; }
+  .hero::after{ content:''; position:absolute; left:-12%; bottom:-65%; width:72%; height:150%;
+    background:radial-gradient(ellipse at center, rgba(251,191,36,.30), transparent 62%); pointer-events:none; }
+  .hero-num{ font-size:38px!important; }
+  .menu-card:hover{ box-shadow:0 8px 22px rgba(0,0,0,.4); }
+
 </style>
 </head>
 <body>
@@ -295,10 +345,10 @@ function renderHome(){
   const lastDate = myData.length? myData[myData.length-1].tanggal : null;
 
   box.innerHTML = `
-    <div style="background:linear-gradient(135deg,#1e1b3a 0%,#4c2889 50%,#9a3412 100%);border-radius:16px;padding:26px;color:#fff;margin-bottom:1.3rem;box-shadow:0 8px 30px rgba(30,27,58,.25);position:relative;overflow:hidden">
-      <div style="font-size:12px;color:#a09e99;text-transform:uppercase;letter-spacing:.05em">GMV Bulan Ini — ${monthName}</div>
-      <div style="font-size:34px;font-weight:600;letter-spacing:-.02em;margin:6px 0">${rp(tot.gmv)}</div>
-      <div style="display:flex;gap:20px;font-size:13px;color:#d0cec6;flex-wrap:wrap">
+    <div class="hero" style="background:linear-gradient(135deg,#241f47 0%,#5b2da0 50%,#b4451a 100%);border-radius:16px;padding:26px;color:#fff;margin-bottom:1.3rem;box-shadow:0 8px 30px rgba(30,27,58,.25);position:relative;overflow:hidden">
+      <div style="font-size:12px;color:rgba(255,255,255,.72);text-transform:uppercase;letter-spacing:.05em">GMV Bulan Ini — ${monthName}</div>
+      <div class="hero-num" style="font-size:34px;font-weight:600;letter-spacing:-.02em;margin:6px 0">${rp(tot.gmv)}</div>
+      <div style="display:flex;gap:20px;font-size:13px;color:rgba(255,255,255,.82);flex-wrap:wrap">
         <span>${md.length} sesi live</span><span>${closing} sesi closing</span><span>${tot.pembeli} pembeli</span><span>${tot.viewers.toLocaleString('id-ID')} viewers</span>
       </div>
       ${md.length===0?`<div style="margin-top:12px;font-size:12px;color:#fbbf24">Belum ada data bulan ini — yuk isi lewat menu Input Data.</div>`:''}
@@ -306,22 +356,22 @@ function renderHome(){
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem">
       <div class="menu-card" onclick="goTab('p-input',1)">
-        <div class="menu-ic" style="background:#f3f0ff;color:#6d28d9">✏️</div>
+        <div class="menu-ic" style="background:rgba(167,139,250,.16);color:#c4b5fd">✏️</div>
         <div class="menu-t">Input Data Performa</div>
         <div class="menu-s">Isi data tiap sesi live kamu</div>
       </div>
       <div class="menu-card" onclick="goTab('p-mine',2)">
-        <div class="menu-ic" style="background:#f0fdf4;color:#16a34a">📊</div>
+        <div class="menu-ic" style="background:rgba(74,222,128,.15);color:#4ade80">📊</div>
         <div class="menu-t">Performa Saya</div>
         <div class="menu-s">Grafik &amp; riwayat lengkap</div>
       </div>
       <a class="menu-card" href="https://tinyurl.com/host-senja" style="text-decoration:none;color:inherit">
-        <div class="menu-ic" style="background:#fffbeb;color:#d97706">📋</div>
+        <div class="menu-ic" style="background:rgba(251,191,36,.15);color:#fbbf24">📋</div>
         <div class="menu-t">Hasil Evaluasi</div>
         <div class="menu-s">Lihat penilaian &amp; target dari leader</div>
       </a>
       <div class="menu-card" onclick="goTab('p-input',1)">
-        <div class="menu-ic" style="background:#f5f3ff;color:#7c3aed">⚡</div>
+        <div class="menu-ic" style="background:rgba(167,139,250,.13);color:#a78bfa">⚡</div>
         <div class="menu-t">Input Cepat</div>
         <div class="menu-s">Langsung isi sesi terbaru</div>
       </div>
@@ -501,14 +551,14 @@ function renderPerfBody(ctx, allData, label, month){
   // GMV trend
   charts.gmv = new Chart(document.getElementById('chGmv_'+ctx),{type:'line',data:{
     labels:data.map((r,i)=>fmtTgl(r.tanggal)+' S'+r.sesi),
-    datasets:[{data:data.map(r=>+r.gmv||0),borderColor:'#6d28d9',backgroundColor:'rgba(109,40,217,.08)',tension:.3,pointRadius:2,fill:true}]
-  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'#f2f1ee'}}}}});
+    datasets:[{data:data.map(r=>+r.gmv||0),borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.15)',tension:.3,pointRadius:2,fill:true}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'rgba(255,255,255,.07)'}}}}});
   // Avg per sesi
   const bySesi=[1,2,3,4].map(s=>{const ss=data.filter(r=>+r.sesi===s);return ss.length? ss.reduce((a,r)=>a+(+r.gmv||0),0)/ss.length : 0;});
   charts.sesi = new Chart(document.getElementById('chSesi_'+ctx),{type:'bar',data:{
     labels:['Sesi 1','Sesi 2','Sesi 3','Sesi 4'],
-    datasets:[{data:bySesi,backgroundColor:['#93c5fd','#60a5fa','#3b82f6','#6d28d9'],borderRadius:5}]
-  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'#f2f1ee'}},x:{grid:{display:false}}}}});
+    datasets:[{data:bySesi,backgroundColor:['#93c5fd','#818cf8','#a78bfa','#f0a868'],borderRadius:5}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'rgba(255,255,255,.07)'}},x:{grid:{display:false}}}}});
 }
 
 // ════════════════════════════════════
@@ -555,10 +605,10 @@ function renderLeaderHome(){
   });
 
   box.innerHTML=`
-    <div style="background:linear-gradient(135deg,#1e1b3a 0%,#4c2889 50%,#9a3412 100%);border-radius:16px;padding:26px;color:#fff;margin-bottom:1.3rem;box-shadow:0 8px 30px rgba(30,27,58,.25);position:relative;overflow:hidden">
-      <div style="font-size:12px;color:#a09e99;text-transform:uppercase;letter-spacing:.05em">Total GMV Tim — ${monthName}</div>
-      <div style="font-size:34px;font-weight:600;letter-spacing:-.02em;margin:6px 0">${rp(tot.gmv)}</div>
-      <div style="display:flex;gap:20px;font-size:13px;color:#d0cec6;flex-wrap:wrap">
+    <div class="hero" style="background:linear-gradient(135deg,#241f47 0%,#5b2da0 50%,#b4451a 100%);border-radius:16px;padding:26px;color:#fff;margin-bottom:1.3rem;box-shadow:0 8px 30px rgba(30,27,58,.25);position:relative;overflow:hidden">
+      <div style="font-size:12px;color:rgba(255,255,255,.72);text-transform:uppercase;letter-spacing:.05em">Total GMV Tim — ${monthName}</div>
+      <div class="hero-num" style="font-size:34px;font-weight:600;letter-spacing:-.02em;margin:6px 0">${rp(tot.gmv)}</div>
+      <div style="display:flex;gap:20px;font-size:13px;color:rgba(255,255,255,.82);flex-wrap:wrap">
         <span>${md.length} sesi live</span><span>${activeHosts} host aktif</span><span>${tot.pembeli} pembeli</span><span>${tot.viewers.toLocaleString('id-ID')} viewers</span>
       </div>
     </div>
@@ -572,22 +622,22 @@ function renderLeaderHome(){
     <div class="grp-head">Menu</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
       <a class="menu-card" href="https://tinyurl.com/leader-senja" style="text-decoration:none;color:inherit">
-        <div class="menu-ic" style="background:#fffbeb;color:#d97706">✏️</div>
+        <div class="menu-ic" style="background:rgba(251,191,36,.15);color:#fbbf24">✏️</div>
         <div class="menu-t">Input Evaluasi</div>
         <div class="menu-s">Nilai host (17 poin / 6 kategori)</div>
       </a>
       <a class="menu-card" href="https://tinyurl.com/dashboard-senja" style="text-decoration:none;color:inherit">
-        <div class="menu-ic" style="background:#f3f0ff;color:#6d28d9">📋</div>
+        <div class="menu-ic" style="background:rgba(167,139,250,.16);color:#c4b5fd">📋</div>
         <div class="menu-t">Dashboard Evaluasi</div>
         <div class="menu-s">Pantau skor & progress semua host</div>
       </a>
       <div class="menu-card" onclick="goLeaderTab('l-dash',1)">
-        <div class="menu-ic" style="background:#f0fdf4;color:#16a34a">📊</div>
+        <div class="menu-ic" style="background:rgba(74,222,128,.15);color:#4ade80">📊</div>
         <div class="menu-t">Dashboard Performa</div>
         <div class="menu-s">GMV, CTR, konversi per host</div>
       </div>
       <div class="menu-card" onclick="goLeaderTab('l-import',2)">
-        <div class="menu-ic" style="background:#f5f3ff;color:#7c3aed">📥</div>
+        <div class="menu-ic" style="background:rgba(167,139,250,.13);color:#a78bfa">📥</div>
         <div class="menu-t">Import Data</div>
         <div class="menu-s">Upload export TikTok per brand</div>
       </div>
@@ -665,7 +715,7 @@ function renderDash(){
   charts.cmp=new Chart(document.getElementById('chCompare'),{type:'bar',data:{
     labels:cmpHosts.map(x=>x.h.name),
     datasets:[{data:cmpHosts.map(x=>x.g),backgroundColor:cmpHosts.map(x=>x.h.color),borderRadius:5}]
-  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1e6).toFixed(1)+'jt',font:{size:10}},grid:{color:'#f2f1ee'}},x:{grid:{display:false}}}}});
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1e6).toFixed(1)+'jt',font:{size:10}},grid:{color:'rgba(255,255,255,.07)'}},x:{grid:{display:false}}}}});
 }
 
 function drilldown(email,name){

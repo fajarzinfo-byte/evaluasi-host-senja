@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Evaluasi Host Live — Scoring Sheet</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
 
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -189,7 +189,7 @@
     color: var(--text3);
     font-family: 'Plus Jakarta Sans', sans-serif;
   }
-  .star:hover { border-color: var(--star-on); background: #fef3c7; color: var(--star-on); }
+  .star:hover { border-color: var(--star-on); background: rgba(251,191,36,.18); color: var(--star-on); }
   .star.on { background: var(--star-on); border-color: var(--star-on); color: #fff; }
 
   .section-notes {
@@ -326,7 +326,7 @@
     color: #fff;
     border-color: var(--text);
   }
-  .btn-primary:hover { background: #333; }
+  .btn-primary:hover { filter:brightness(1.08); }
   .btn-danger {
     color: var(--bad);
     border-color: var(--bad-border);
@@ -427,6 +427,56 @@
     .page { padding: 1rem; }
     .section-card, .stat, .verdict, .commitment-box { break-inside: avoid; }
   }
+
+  /* ════════ SENJA — DUSK THEME (langit malam, sisa cahaya jingga di horizon) ════════ */
+  :root{
+    --bg:#0d0c17; --surface:#17152a; --surface2:#211e3a;
+    --border:#2a2742; --border2:#3a3658;
+    --text:#f1eefb; --text2:#b0aacb; --text3:#76709a;
+    --accent:#a78bfa; --accent-bg:rgba(167,139,250,.13); --accentbg:rgba(167,139,250,.13);
+    --good:#4ade80; --good-bg:rgba(74,222,128,.13); --goodbg:rgba(74,222,128,.13);
+    --good-border:rgba(74,222,128,.32); --goodbd:rgba(74,222,128,.32);
+    --warn:#fbbf24; --warn-bg:rgba(251,191,36,.13); --warnbg:rgba(251,191,36,.13);
+    --warn-border:rgba(251,191,36,.32); --warnbd:rgba(251,191,36,.32);
+    --bad:#fb7185; --bad-bg:rgba(251,113,133,.13); --badbg:rgba(251,113,133,.13);
+    --bad-border:rgba(251,113,133,.32); --badbd:rgba(251,113,133,.32);
+    --star-on:#fbbf24; --star-off:#272343;
+    --twilight:linear-gradient(135deg,#3b2f9e 0%,#6d28d9 45%,#f97316 100%);
+    --dusk:#17152a;
+  }
+  html{ color-scheme:dark; scrollbar-color:#322e4e transparent; }
+  body{ background:
+    radial-gradient(1100px 480px at 88% -8%, rgba(109,40,217,.16), transparent 60%),
+    radial-gradient(900px 420px at 6% 4%, rgba(249,115,22,.07), transparent 55%),
+    var(--bg); background-attachment:fixed; }
+  ::selection{ background:rgba(167,139,250,.35); color:#fff; }
+  ::-webkit-scrollbar{ width:11px; height:11px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:#322e4e; border-radius:9px; border:3px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover{ background:#473f6b; }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+  /* numeric signature face — uang & skor yang paling sering dilihat tim */
+  .brand-name,.hero-num,.stat-v,.stat-value,.host-score,.eval-score,.section-avg,.calc-v{
+    font-family:'Space Grotesk','Plus Jakarta Sans',sans-serif; font-feature-settings:'tnum' 1; }
+  /* login jadi kaca gelap di atas horizon senja */
+  .login-card{ background:rgba(20,18,38,.66)!important; border:1px solid rgba(167,139,250,.22)!important;
+    box-shadow:0 26px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05)!important; }
+  .login-card input{ background:rgba(10,9,20,.55); }
+  .login-card input::placeholder{ color:var(--text3); }
+  .login-wrap::before{ opacity:.85; }
+  /* tombol aksi pakai gradient senja (sebelumnya pakai --text yang kini terang) */
+  .btn-accent{ background:var(--twilight)!important; color:#fff!important; border:none!important;
+    box-shadow:0 6px 18px rgba(109,40,217,.32); }
+  .btn-accent:hover{ filter:brightness(1.08); transform:translateY(-1px); }
+  @media (prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important; } }
+
+  .star:hover{ background:rgba(251,191,36,.18)!important; border-color:var(--star-on)!important; color:var(--star-on)!important; }
+  .star.on{ color:#1a1430!important; }
+  .section-icon{ box-shadow:inset 0 0 0 1px rgba(255,255,255,.06); }
+  .btn-primary{ background:var(--twilight)!important; color:#fff!important; border-color:transparent!important;
+    box-shadow:0 6px 18px rgba(109,40,217,.3); }
+  .btn-primary:hover{ filter:brightness(1.08); }
+
 </style>
 </head>
 <body>
@@ -574,7 +624,7 @@ const SECTIONS = [
   {
     id: 'energi',
     title: 'Energi & konsistensi',
-    color: '#fef3c7',
+    color: 'rgba(251,191,36,.20)',
     icon: '⚡',
     items: [
       'Semangat konsisten dari menit pertama sampai akhir live',
@@ -586,7 +636,7 @@ const SECTIONS = [
   {
     id: 'presence',
     title: 'Presence & bahasa tubuh',
-    color: '#ede9fe',
+    color: 'rgba(167,139,250,.22)',
     icon: '👁',
     items: [
       'Tatapan ke kamera, bukan ke layar atau HP sendiri',
@@ -597,7 +647,7 @@ const SECTIONS = [
   {
     id: 'script',
     title: 'Penguasaan script',
-    color: '#dbeafe',
+    color: 'rgba(96,165,250,.22)',
     icon: '📝',
     items: [
       'Opening natural, tidak terlihat baca atau hafalan kaku',
@@ -609,7 +659,7 @@ const SECTIONS = [
   {
     id: 'produk',
     title: 'Penguasaan produk',
-    color: '#dcfce7',
+    color: 'rgba(74,222,128,.20)',
     icon: '🎒',
     items: [
       'Hafal detail produk: bahan, ukuran, keunggulan tas',
@@ -620,7 +670,7 @@ const SECTIONS = [
   {
     id: 'situasi',
     title: 'Respon situasi',
-    color: '#ffedd5',
+    color: 'rgba(249,115,22,.22)',
     icon: '🚨',
     items: [
       'Waktu sepi — bisa recovery sendiri, tidak langsung freeze',
@@ -631,7 +681,7 @@ const SECTIONS = [
   {
     id: 'attitude',
     title: 'Attitude & growth mindset',
-    color: '#fce7f3',
+    color: 'rgba(236,72,153,.22)',
     icon: '💪',
     items: [
       'Mau nerima feedback tanpa defensif',
@@ -984,8 +1034,8 @@ async function initApp() {
       document.body.innerHTML = `
         <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg,#f7f6f3)">
           <div style="text-align:center;padding:2rem">
-            <p style="font-size:15px;color:#6b6860;margin-bottom:16px">Akun ini tidak memiliki akses leader.</p>
-            <button onclick="sb.auth.signOut().then(()=>location.reload())" style="padding:9px 18px;border-radius:8px;border:1px solid #d0cec6;background:#fff;cursor:pointer;font-size:13px">Keluar</button>
+            <p style="font-size:15px;color:var(--text2);margin-bottom:16px">Akun ini tidak memiliki akses leader.</p>
+            <button onclick="sb.auth.signOut().then(()=>location.reload())" style="padding:9px 18px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;font-size:13px">Keluar</button>
           </div>
         </div>`;
       return;

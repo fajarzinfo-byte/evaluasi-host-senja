@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hasil Evaluasi — Host</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>window.Chart&&(Chart.defaults.color='#b0aacb',Chart.defaults.borderColor='rgba(255,255,255,.07)',Chart.defaults.font.family="'Plus Jakarta Sans',sans-serif");</script>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     --bg: #f6f4ef; --surface: #ffffff; --surface2: #f1ede6;
@@ -99,6 +100,54 @@
     .login-card { padding: 1.5rem; }
     .progress-label { width: 100px; font-size: 11px; }
   }
+
+  /* ════════ SENJA — DUSK THEME (langit malam, sisa cahaya jingga di horizon) ════════ */
+  :root{
+    --bg:#0d0c17; --surface:#17152a; --surface2:#211e3a;
+    --border:#2a2742; --border2:#3a3658;
+    --text:#f1eefb; --text2:#b0aacb; --text3:#76709a;
+    --accent:#a78bfa; --accent-bg:rgba(167,139,250,.13); --accentbg:rgba(167,139,250,.13);
+    --good:#4ade80; --good-bg:rgba(74,222,128,.13); --goodbg:rgba(74,222,128,.13);
+    --good-border:rgba(74,222,128,.32); --goodbd:rgba(74,222,128,.32);
+    --warn:#fbbf24; --warn-bg:rgba(251,191,36,.13); --warnbg:rgba(251,191,36,.13);
+    --warn-border:rgba(251,191,36,.32); --warnbd:rgba(251,191,36,.32);
+    --bad:#fb7185; --bad-bg:rgba(251,113,133,.13); --badbg:rgba(251,113,133,.13);
+    --bad-border:rgba(251,113,133,.32); --badbd:rgba(251,113,133,.32);
+    --star-on:#fbbf24; --star-off:#272343;
+    --twilight:linear-gradient(135deg,#3b2f9e 0%,#6d28d9 45%,#f97316 100%);
+    --dusk:#17152a;
+  }
+  html{ color-scheme:dark; scrollbar-color:#322e4e transparent; }
+  body{ background:
+    radial-gradient(1100px 480px at 88% -8%, rgba(109,40,217,.16), transparent 60%),
+    radial-gradient(900px 420px at 6% 4%, rgba(249,115,22,.07), transparent 55%),
+    var(--bg); background-attachment:fixed; }
+  ::selection{ background:rgba(167,139,250,.35); color:#fff; }
+  ::-webkit-scrollbar{ width:11px; height:11px; }
+  ::-webkit-scrollbar-track{ background:transparent; }
+  ::-webkit-scrollbar-thumb{ background:#322e4e; border-radius:9px; border:3px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover{ background:#473f6b; }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
+  /* numeric signature face — uang & skor yang paling sering dilihat tim */
+  .brand-name,.hero-num,.stat-v,.stat-value,.host-score,.eval-score,.section-avg,.calc-v{
+    font-family:'Space Grotesk','Plus Jakarta Sans',sans-serif; font-feature-settings:'tnum' 1; }
+  /* login jadi kaca gelap di atas horizon senja */
+  .login-card{ background:rgba(20,18,38,.66)!important; border:1px solid rgba(167,139,250,.22)!important;
+    box-shadow:0 26px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05)!important; }
+  .login-card input{ background:rgba(10,9,20,.55); }
+  .login-card input::placeholder{ color:var(--text3); }
+  .login-wrap::before{ opacity:.85; }
+  /* tombol aksi pakai gradient senja (sebelumnya pakai --text yang kini terang) */
+  .btn-accent{ background:var(--twilight)!important; color:#fff!important; border:none!important;
+    box-shadow:0 6px 18px rgba(109,40,217,.32); }
+  .btn-accent:hover{ filter:brightness(1.08); transform:translateY(-1px); }
+  @media (prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important; } }
+
+  .verdict-box.good{ color:var(--good)!important; }
+  .verdict-box.warn{ color:var(--warn)!important; }
+  .verdict-box.bad{ color:var(--bad)!important; }
+  .progress-bar-wrap{ background:rgba(255,255,255,.07); }
+
 </style>
 </head>
 <body>
@@ -223,10 +272,10 @@ async function loadHostData(email) {
         datasets: [{
           label: 'Rata-rata',
           data: scores,
-          borderColor: '#6d28d9',
-          backgroundColor: 'rgba(109,40,217,0.08)',
+          borderColor: '#a78bfa',
+          backgroundColor: 'rgba(167,139,250,0.15)',
           tension: 0.3,
-          pointBackgroundColor: '#6d28d9',
+          pointBackgroundColor: '#a78bfa',
           pointRadius: 5,
           fill: true,
         }]
@@ -236,7 +285,7 @@ async function loadHostData(email) {
         maintainAspectRatio: false,
         plugins: { legend: { display: false } },
         scales: {
-          y: { min: 0, max: 5, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: '#f2f1ee' } },
+          y: { min: 0, max: 5, ticks: { stepSize: 1, font: { size: 11 } }, grid: { color: 'rgba(255,255,255,.07)' } },
           x: { ticks: { font: { size: 11 } }, grid: { display: false } }
         }
       }
@@ -250,7 +299,7 @@ async function loadHostData(email) {
       const vals = sec.scores.filter(v => v > 0);
       const avg = vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : 0;
       const pct = Math.round(avg / 5 * 100);
-      const barColor = avg >= 4 ? '#16a34a' : avg >= 2.5 ? '#d97706' : '#dc2626';
+      const barColor = avg >= 4 ? '#4ade80' : avg >= 2.5 ? '#fbbf24' : '#fb7185';
       return `<div class="progress-row">
         <span class="progress-label">${sec.title}</span>
         <div class="progress-bar-wrap"><div class="progress-bar" style="width:${pct}%;background:${barColor}"></div></div>
