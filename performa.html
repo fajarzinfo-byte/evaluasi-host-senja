@@ -319,7 +319,7 @@ function buildHost(){
     `<div class="panel active" id="p-home"><div id="homeContent"><p class="empty">Memuat...</p></div></div>`+
     `<div class="panel" id="p-input">${hostFormHTML()}</div>`+
     `<div class="panel" id="p-mine"><div id="mineContent"><p class="empty">Memuat...</p></div></div>`;
-  fillDateDropdown('f_tanggal');
+  (function(){ const ft=document.getElementById('f_tanggal'); if(ft){ const d=new Date(); const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; ft.value=iso; ft.max=iso; } })();
   attachCalcListeners();
   loadHostData();
 }
@@ -396,7 +396,7 @@ function renderMine(){
 function hostFormHTML(){
   return `<div class="form-card"><div class="form-grid">
     <div class="group-label">Info Sesi</div>
-    <div class="fg"><label>Tanggal</label><select id="f_tanggal"></select></div>
+    <div class="fg"><label>Tanggal</label><input type="date" id="f_tanggal" /></div>
     <div class="fg"><label>Sesi</label><select id="f_sesi">
       <option value="1">Sesi 1 (07:00–10:00)</option>
       <option value="2">Sesi 2 (11:00–14:00)</option>
@@ -408,7 +408,14 @@ function hostFormHTML(){
     <div class="fg"><label>GMV (Rp)</label><input type="number" id="f_gmv" placeholder="0" /></div>
     <div class="fg"><label>Pembeli</label><input type="number" id="f_pembeli" placeholder="0" /></div>
     <div class="fg"><label>Items Sold</label><input type="number" id="f_items" placeholder="0" /></div>
-    <div class="fg"><label>Durasi (menit) — opsional</label><input type="number" id="f_durasi" placeholder="180" /></div>
+    <div class="fg"><label>Durasi live — opsional</label>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="number" id="f_durasi_jam" placeholder="0" min="0" inputmode="numeric" style="width:64px" />
+        <span class="hint" style="margin:0">jam</span>
+        <input type="number" id="f_durasi_min" placeholder="0" min="0" max="59" inputmode="numeric" style="width:64px" />
+        <span class="hint" style="margin:0">menit</span>
+      </div>
+    </div>
 
     <div class="group-label">Traffic</div>
     <div class="fg"><label>Viewers</label><input type="number" id="f_viewers" placeholder="0" /></div>
@@ -435,14 +442,14 @@ function hostFormHTML(){
 }
 
 function attachCalcListeners(){
-  ['f_gmv','f_pembeli','f_impresi','f_klik','f_viewers','f_likes','f_kom','f_durasi'].forEach(id=>{
+  ['f_gmv','f_pembeli','f_impresi','f_klik','f_viewers','f_likes','f_kom','f_durasi_jam','f_durasi_min'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.addEventListener('input',updateCalc);
   });
 }
 function updateCalc(){
   const v=id=>+document.getElementById(id).value||0;
   const r={gmv:v('f_gmv'),pembeli:v('f_pembeli'),impresi:v('f_impresi'),klik_produk:v('f_klik'),
-           viewers:v('f_viewers'),likes:v('f_likes'),komentar:v('f_kom'),durasi_menit:v('f_durasi')};
+           viewers:v('f_viewers'),likes:v('f_likes'),komentar:v('f_kom'),durasi_menit:v('f_durasi_jam')*60+v('f_durasi_min')};
   const d=derive(r);
   document.getElementById('c_aov').textContent = r.pembeli? rp(d.aov):'—';
   document.getElementById('c_ctr').textContent = r.impresi? pct(d.ctr):'—';
@@ -463,13 +470,13 @@ async function submitPerforma(){
     tanggal:v('f_tanggal'), sesi:+v('f_sesi'),
     gmv:n('f_gmv'), pembeli:n('f_pembeli'), items:n('f_items'),
     viewers:n('f_viewers'), impresi:n('f_impresi'), klik_produk:n('f_klik'),
-    avg_view_dur:n('f_avg'), durasi_menit:n('f_durasi'),
+    avg_view_dur:n('f_avg'), durasi_menit:n('f_durasi_jam')*60+n('f_durasi_min'),
     followers_baru:n('f_foll'), likes:n('f_likes'), komentar:n('f_kom'),
   };
   const {error}=await sb.from('live_performance').insert([payload]);
   if(error){showToast('Gagal: '+error.message,'error');return;}
   showToast('Data sesi tersimpan!','success');
-  ['f_gmv','f_pembeli','f_items','f_viewers','f_impresi','f_klik','f_avg','f_durasi','f_foll','f_likes','f_kom'].forEach(id=>document.getElementById(id).value='');
+  ['f_gmv','f_pembeli','f_items','f_viewers','f_impresi','f_klik','f_avg','f_durasi_jam','f_durasi_min','f_foll','f_likes','f_kom'].forEach(id=>document.getElementById(id).value='');
   updateCalc();
   loadHostData();
 }
