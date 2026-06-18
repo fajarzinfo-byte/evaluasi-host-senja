@@ -173,6 +173,23 @@
   .btn-accent{ background:var(--twilight)!important; color:#fff!important; border:none!important;
     box-shadow:0 6px 18px rgba(109,40,217,.32); }
   .btn-accent:hover{ filter:brightness(1.08); transform:translateY(-1px); }
+  /* row actions + edit modal */
+  .row-btn{ background:transparent; border:1px solid var(--border2); border-radius:7px; padding:3px 7px;
+    font-size:13px; cursor:pointer; line-height:1; margin-right:5px; transition:.12s; }
+  .row-btn:hover{ border-color:var(--accent); background:var(--accent-bg); transform:translateY(-1px); }
+  .row-btn.del:hover{ border-color:var(--bad); background:var(--bad-bg); }
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(5,4,12,.66); backdrop-filter:blur(3px);
+    z-index:200; align-items:center; justify-content:center; padding:1rem; }
+  .modal-overlay.open{ display:flex; }
+  .modal-box{ background:var(--surface); border:1px solid var(--border2); border-radius:16px; width:100%;
+    max-width:560px; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 28px 80px rgba(0,0,0,.6); }
+  .modal-top{ display:flex; justify-content:space-between; align-items:center; padding:16px 20px;
+    border-bottom:1px solid var(--border); }
+  .modal-h{ font-size:15px; font-weight:700; letter-spacing:-.01em; }
+  .modal-x{ background:none; border:none; font-size:22px; line-height:1; cursor:pointer; color:var(--text2); padding:2px 6px; }
+  .modal-x:hover{ color:var(--text); }
+  .modal-content{ padding:18px 20px; overflow-y:auto; }
+  .modal-foot{ display:flex; justify-content:flex-end; gap:10px; padding:14px 20px; border-top:1px solid var(--border); }
   @media (prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important; } }
 
   .hero{ box-shadow:0 14px 40px rgba(0,0,0,.45)!important; border:1px solid rgba(167,139,250,.18)!important; }
@@ -218,6 +235,50 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- EDIT SESI MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-box">
+    <div class="modal-top">
+      <span class="modal-h">Edit Sesi</span>
+      <button class="modal-x" onclick="closeEditModal()" title="Tutup">×</button>
+    </div>
+    <div class="modal-content">
+      <div class="form-grid">
+        <div class="fg"><label>Tanggal</label><input type="date" id="e_tanggal" /></div>
+        <div class="fg"><label>Sesi</label><select id="e_sesi">
+          <option value="1">Sesi 1 (07:00–10:00)</option>
+          <option value="2">Sesi 2 (11:00–14:00)</option>
+          <option value="3">Sesi 3 (14:30–17:30)</option>
+          <option value="4">Sesi 4 (18:30–21:30)</option>
+        </select></div>
+        <div class="fg"><label>GMV (Rp)</label><input type="number" id="e_gmv" placeholder="0" /></div>
+        <div class="fg"><label>Pembeli</label><input type="number" id="e_pembeli" placeholder="0" /></div>
+        <div class="fg"><label>Items Sold</label><input type="number" id="e_items" placeholder="0" /></div>
+        <div class="fg"><label>Durasi live</label>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input type="number" id="e_durasi_jam" placeholder="0" min="0" style="width:64px" />
+            <span class="hint" style="margin:0">jam</span>
+            <input type="number" id="e_durasi_min" placeholder="0" min="0" max="59" style="width:64px" />
+            <span class="hint" style="margin:0">menit</span>
+          </div>
+        </div>
+        <div class="fg"><label>Viewers</label><input type="number" id="e_viewers" placeholder="0" /></div>
+        <div class="fg"><label>Impresi</label><input type="number" id="e_impresi" placeholder="0" /></div>
+        <div class="fg"><label>Klik Produk</label><input type="number" id="e_klik" placeholder="0" /></div>
+        <div class="fg"><label>Avg View Dur (dtk)</label><input type="number" id="e_avg" placeholder="0" /></div>
+        <div class="fg"><label>Followers Baru</label><input type="number" id="e_foll" placeholder="0" /></div>
+        <div class="fg"><label>Likes</label><input type="number" id="e_likes" placeholder="0" /></div>
+        <div class="fg"><label>Komentar</label><input type="number" id="e_kom" placeholder="0" /></div>
+        <div class="fg"></div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn-ghost" onclick="closeEditModal()">Batal</button>
+      <button class="btn-accent" onclick="saveEditSesi()">Simpan Perubahan</button>
+    </div>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -543,8 +604,9 @@ function renderPerfBody(ctx, allData, label, month){
     <div class="chart-card"><h3>GMV per sesi (rata-rata sesi 1–4)</h3><div class="chart-wrap sm"><canvas id="chSesi_${ctx}"></canvas></div></div>
     <div class="section-title">Riwayat Sesi</div>
     <div class="tbl-wrap"><div class="tbl-scroll"><table>
-      <thead><tr><th>Tgl</th><th>Sesi</th><th class="num">GMV</th><th class="num">Pembeli</th><th class="num">Items</th><th class="num">Viewers</th><th class="num">Impresi</th><th class="num">Klik</th><th class="num">AvgDur</th><th class="num">Follow</th><th class="num">Likes</th><th class="num">Komen</th><th class="num">CTR</th><th class="num">CTOR</th><th class="num">GPM</th><th class="num">Eng</th></tr></thead>
+      <thead><tr><th>Aksi</th><th>Tgl</th><th>Sesi</th><th class="num">GMV</th><th class="num">Pembeli</th><th class="num">Items</th><th class="num">Viewers</th><th class="num">Impresi</th><th class="num">Klik</th><th class="num">AvgDur</th><th class="num">Follow</th><th class="num">Likes</th><th class="num">Komen</th><th class="num">CTR</th><th class="num">CTOR</th><th class="num">GPM</th><th class="num">Eng</th></tr></thead>
       <tbody>${[...data].reverse().map(r=>{const d=derive(r);return `<tr>
+        <td style="white-space:nowrap"><button class="row-btn" onclick="openEditSesi('${r.id}')" title="Edit sesi">✏️</button>${ROLE==='leader'?`<button class="row-btn del" onclick="deleteSesi('${r.id}')" title="Hapus sesi">🗑️</button>`:''}</td>
         <td>${fmtTgl(r.tanggal)}</td><td>S${r.sesi}</td>
         <td class="num">${rp(+r.gmv||0)}</td><td class="num">${r.pembeli||0}</td><td class="num">${r.items||0}</td>
         <td class="num">${(r.viewers||0).toLocaleString('id-ID')}</td><td class="num">${(r.impresi||0).toLocaleString('id-ID')}</td><td class="num">${r.klik_produk||0}</td>
@@ -659,6 +721,7 @@ function goLeaderTab(panelId, tabIdx){
 }
 
 function renderDash(){
+  window._drillEmail=null;
   const box=document.getElementById('dashContent');
   // build month options
   const months=[...new Set(allPerf.filter(r=>r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort().reverse();
@@ -726,12 +789,76 @@ function renderDash(){
 }
 
 function drilldown(email,name){
+  window._drillEmail=email; window._drillName=name;
   switchTabById('l-dash');
   const box=document.getElementById('dashContent');
   const hd=allPerf.filter(r=>r.host_email===email).sort((a,b)=>(a.tanggal+a.sesi).localeCompare(b.tanggal+b.sesi));
   box.innerHTML=`<button class="btn-ghost" style="margin-bottom:14px" onclick="renderDash()">← Kembali ke dashboard</button>
     <div class="section-title">Detail Performa — ${name}</div><div id="ddView"></div>`;
   renderPerformanceView(document.getElementById('ddView'), hd, name, 'drill');
+}
+
+// ── Edit / Hapus Sesi ──
+let _editId=null;
+function findSesi(id){ return [...myData, ...allPerf].find(r=>String(r.id)===String(id)); }
+
+function openEditSesi(id){
+  const r=findSesi(id);
+  if(!r){ showToast('Data sesi tidak ditemukan.','error'); return; }
+  _editId=id;
+  const set=(i,v)=>{ const el=document.getElementById(i); if(el) el.value=(v==null?'':v); };
+  set('e_tanggal', r.tanggal||'');
+  document.getElementById('e_sesi').value=String(r.sesi||1);
+  set('e_gmv',r.gmv); set('e_pembeli',r.pembeli); set('e_items',r.items);
+  const m=+r.durasi_menit||0;
+  set('e_durasi_jam', m?Math.floor(m/60):''); set('e_durasi_min', m? m%60 : '');
+  set('e_viewers',r.viewers); set('e_impresi',r.impresi); set('e_klik',r.klik_produk);
+  set('e_avg',r.avg_view_dur); set('e_foll',r.followers_baru); set('e_likes',r.likes); set('e_kom',r.komentar);
+  document.getElementById('editModal').classList.add('open');
+}
+function closeEditModal(){ document.getElementById('editModal').classList.remove('open'); _editId=null; }
+
+async function saveEditSesi(){
+  if(_editId==null) return;
+  const v=id=>document.getElementById(id).value;
+  const n=id=>+document.getElementById(id).value||0;
+  if(!v('e_tanggal')){ alert('Tanggal tidak boleh kosong.'); return; }
+  const payload={
+    tanggal:v('e_tanggal'), sesi:+v('e_sesi'),
+    gmv:n('e_gmv'), pembeli:n('e_pembeli'), items:n('e_items'),
+    viewers:n('e_viewers'), impresi:n('e_impresi'), klik_produk:n('e_klik'),
+    avg_view_dur:n('e_avg'), durasi_menit:n('e_durasi_jam')*60+n('e_durasi_min'),
+    followers_baru:n('e_foll'), likes:n('e_likes'), komentar:n('e_kom'),
+  };
+  const {data,error}=await sb.from('live_performance').update(payload).eq('id',_editId).select();
+  if(error){ showToast('Gagal menyimpan: '+error.message,'error'); return; }
+  if(!data||!data.length){ showToast('Perubahan tidak tersimpan — akunmu belum punya izin edit (lihat catatan SQL).','error'); return; }
+  showToast('Perubahan tersimpan!','success');
+  closeEditModal();
+  await afterPerfChange();
+}
+
+async function deleteSesi(id){
+  const r=findSesi(id);
+  const lbl = r? `${fmtTgl(r.tanggal)} · Sesi ${r.sesi} · ${rp(+r.gmv||0)}` : 'sesi ini';
+  if(!confirm(`Hapus data ${lbl}?\nTindakan ini tidak bisa dibatalkan.`)) return;
+  const {data,error}=await sb.from('live_performance').delete().eq('id',id).select();
+  if(error){ showToast('Gagal menghapus: '+error.message,'error'); return; }
+  if(!data||!data.length){ showToast('Tidak terhapus — akunmu belum punya izin hapus (lihat catatan SQL).','error'); return; }
+  showToast('Sesi dihapus.','success');
+  await afterPerfChange();
+}
+
+async function afterPerfChange(){
+  if(ROLE==='host'){
+    await loadHostData();
+    goTab('p-mine',2);
+  } else {
+    const {data}=await sb.from('live_performance').select('*').order('tanggal',{ascending:true});
+    allPerf=data||[];
+    if(window._drillEmail){ drilldown(window._drillEmail, window._drillName); }
+    else { renderDash(); }
+  }
 }
 
 // ── Import ──
