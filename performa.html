@@ -766,10 +766,12 @@ function buildLeader(){
   document.getElementById('tabs').innerHTML =
     `<div class="tab active" onclick="switchTab(this,'l-home')">Beranda</div>`+
     `<div class="tab" onclick="switchTab(this,'l-dash')">Dashboard Performa</div>`+
+    `<div class="tab" onclick="switchTab(this,'l-compare')">Banding</div>`+
     `<div class="tab" onclick="switchTab(this,'l-import')">Import Data</div>`;
   document.getElementById('panels').innerHTML =
     `<div class="panel active" id="l-home"><div id="leaderHome"><p class="empty">Memuat...</p></div></div>`+
     `<div class="panel" id="l-dash"><div id="dashContent"><p class="empty">Memuat...</p></div></div>`+
+    `<div class="panel" id="l-compare"><div id="compareContent"><p class="empty">Memuat...</p></div></div>`+
     `<div class="panel" id="l-import">${importHTML()}</div>`;
   setupDrop();
   loadDash();
@@ -781,6 +783,7 @@ async function loadDash(){
   allPerf=data||[];
   renderDash();
   renderLeaderHome();
+  renderCompare();
 }
 
 function renderLeaderHome(){
@@ -831,7 +834,12 @@ function renderLeaderHome(){
         <div class="menu-t">Dashboard Performa</div>
         <div class="menu-s">GMV, CTR, konversi per host</div>
       </div>
-      <div class="menu-card" onclick="goLeaderTab('l-import',2)">
+      <div class="menu-card" onclick="goLeaderTab('l-compare',2)">
+        <div class="menu-ic" style="background:rgba(96,165,250,.15);color:#60a5fa">⚖️</div>
+        <div class="menu-t">Bandingkan Host</div>
+        <div class="menu-s">Adu metrik antar host per brand</div>
+      </div>
+      <div class="menu-card" onclick="goLeaderTab('l-import',3)">
         <div class="menu-ic" style="background:rgba(167,139,250,.13);color:#a78bfa">📥</div>
         <div class="menu-t">Import Data</div>
         <div class="menu-s">Upload export TikTok per brand</div>
@@ -912,6 +920,111 @@ function renderDash(){
     labels:cmpHosts.map(x=>x.h.name),
     datasets:[{data:cmpHosts.map(x=>x.g),backgroundColor:cmpHosts.map(x=>x.h.color),borderRadius:5}]
   },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1e6).toFixed(1)+'jt',font:{size:10}},grid:{color:'rgba(255,255,255,.07)'}},x:{grid:{display:false}}}}});
+}
+
+// ════════════════════════════════════
+// BANDINGKAN HOST (per brand, jumlah host dinamis, pilih bulan)
+// ════════════════════════════════════
+function renderCompare(){
+  const box=document.getElementById('compareContent');
+  if(!box) return;
+
+  const curBrand=document.getElementById('cmpBrand')?.value || 'Onebear';
+
+  const months=[...new Set(allPerf.filter(r=>r.brand===curBrand&&r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort().reverse();
+  const thisMonth=new Date().toISOString().slice(0,7);
+  const savedM=document.getElementById('cmpMonth')?.value;
+  let curMonth;
+  if(savedM===undefined) curMonth = months.includes(thisMonth)?thisMonth:(months[0]||'');
+  else if(savedM!=='' && !months.includes(savedM)) curMonth = months.includes(thisMonth)?thisMonth:(months[0]||'');
+  else curMonth = savedM;
+
+  const monthOpts=`<option value="" ${curMonth===''?'selected':''}>Semua bulan (akumulasi)</option>`+
+    months.map(m=>{const[y,mo]=m.split('-');return `<option value="${m}" ${m===curMonth?'selected':''}>${new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`}).join('');
+
+  const periodLbl = curMonth==='' ? 'Akumulasi semua bulan' : (()=>{const[y,mo]=curMonth.split('-');return new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})})();
+
+  const hosts=ALL_HOSTS.filter(h=>h.brand===curBrand);
+  const rowsData=allPerf.filter(r=>r.brand===curBrand && (!curMonth || (r.tanggal&&r.tanggal.startsWith(curMonth))));
+
+  const hd=hosts.map(h=>{
+    const hr=rowsData.filter(r=>r.host_email===h.email);
+    if(!hr.length) return {h, none:true};
+    const s=hr.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.items+=+r.items||0;a.vw+=+r.viewers||0;a.imp+=+r.impresi||0;a.kl+=+r.klik_produk||0;a.likes+=+r.likes||0;a.kom+=+r.komentar||0;return a;},{gmv:0,pembeli:0,items:0,vw:0,imp:0,kl:0,likes:0,kom:0});
+    const d=derive({gmv:s.gmv,pembeli:s.pembeli,impresi:s.imp,klik_produk:s.kl,viewers:s.vw,likes:s.likes,komentar:s.kom,durasi_menit:0});
+    return {h, none:false, sesi:hr.length, gmv:s.gmv, pembeli:s.pembeli, items:s.items, viewers:s.vw,
+            aov:d.aov, ctr:d.ctr, ctor:d.ctor, eng:d.eng};
+  });
+
+  const withData=hd.filter(x=>!x.none);
+
+  let html=`
+    <div class="filter-row">
+      <select id="cmpBrand" onchange="renderCompare()">
+        <option value="Onebear" ${curBrand==='Onebear'?'selected':''}>Onebear</option>
+        <option value="Supoe" ${curBrand==='Supoe'?'selected':''}>Supoe</option>
+        <option value="Momso" ${curBrand==='Momso'?'selected':''}>Momso</option>
+      </select>
+      <select id="cmpMonth" onchange="renderCompare()">${monthOpts}</select>
+    </div>
+    <div class="section-title">Bandingkan Host — ${curBrand}</div>
+    <div style="font-size:12px;color:var(--text3);margin:-6px 0 12px">${periodLbl}</div>`;
+
+  if(!withData.length){
+    box.innerHTML=html+`<p class="empty">Belum ada data untuk ${curBrand} di periode ini.</p>`;
+    if(charts.ctor){try{charts.ctor.destroy()}catch(e){}}
+    return;
+  }
+
+  const bestOf=key=>Math.max(0,...withData.map(x=>+x[key]||0));
+
+  function qCell(x,key,fmt){
+    if(x.none) return `<td class="num" style="color:var(--text3)">—</td>`;
+    const v=+x[key]||0;
+    if(v<=0) return `<td class="num" style="color:var(--text3)">—</td>`;
+    const best=bestOf(key);
+    if(v===best) return `<td class="num" style="font-weight:700;color:var(--good)">${fmt(v)} <span style="font-size:10px">▲ tertinggi</span></td>`;
+    const delta=Math.round((v/best-1)*100);
+    return `<td class="num">${fmt(v)} <span style="font-size:11px;color:#f59e0b">${delta}%</span></td>`;
+  }
+  function vCell(x,key,fmt){
+    if(x.none) return `<td class="num" style="color:var(--text3)">—</td>`;
+    return `<td class="num">${fmt(+x[key]||0)}</td>`;
+  }
+
+  const head=`<th>Metrik</th>`+hd.map(x=>`<th class="num">${x.h.name}${x.none?' <span style="font-weight:400;color:var(--text3);font-size:10px">(no data)</span>':''}</th>`).join('');
+
+  const rowsHtml=[
+    `<tr><td><b>GMV</b> <span style="font-size:10px;color:var(--text3)">volume · dipengaruhi jam tayang</span></td>${hd.map(x=>vCell(x,'gmv',rp)).join('')}</tr>`,
+    `<tr><td>Sesi <span style="font-size:10px;color:var(--text3)">volume</span></td>${hd.map(x=>vCell(x,'sesi',v=>v)).join('')}</tr>`,
+    `<tr><td>Pembeli <span style="font-size:10px;color:var(--text3)">volume</span></td>${hd.map(x=>vCell(x,'pembeli',v=>(v||0).toLocaleString('id-ID'))).join('')}</tr>`,
+    `<tr style="border-top:2px solid var(--border2)"><td><b>AOV</b> <span style="font-size:10px;color:var(--text3)">kualitas basket</span></td>${hd.map(x=>qCell(x,'aov',rp)).join('')}</tr>`,
+    `<tr><td><b>CTR</b> <span style="font-size:10px;color:var(--text3)">daya tarik</span></td>${hd.map(x=>qCell(x,'ctr',pct)).join('')}</tr>`,
+    `<tr><td><b>CTOR</b> <span style="font-size:10px;color:var(--text3)">closing</span></td>${hd.map(x=>qCell(x,'ctor',pct)).join('')}</tr>`,
+    `<tr><td><b>Engagement</b> <span style="font-size:10px;color:var(--text3)">interaktivitas</span></td>${hd.map(x=>qCell(x,'eng',pct)).join('')}</tr>`,
+  ].join('');
+
+  html+=`
+    <div class="tbl-wrap"><div class="tbl-scroll"><table>
+      <thead><tr>${head}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table></div></div>
+    <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5">
+      ▲ = nilai terbaik di barisnya. Persentase = selisih relatif terhadap yang tertinggi.<br>
+      Penilaian "siapa lebih jago" pakai metrik kualitas (AOV, CTR, CTOR, Engagement), bukan GMV mentah — karena GMV besar sering cuma efek jam tayang ramai.
+    </div>
+    <div class="chart-card" style="margin-top:1.1rem"><h3>CTOR — kemampuan closing (%)</h3><div class="chart-wrap sm"><canvas id="chCtor"></canvas></div></div>`;
+
+  box.innerHTML=html;
+
+  if(charts.ctor){try{charts.ctor.destroy()}catch(e){}}
+  const cd=withData.filter(x=>(+x.ctor||0)>0);
+  if(cd.length){
+    charts.ctor=new Chart(document.getElementById('chCtor'),{type:'bar',data:{
+      labels:cd.map(x=>x.h.name),
+      datasets:[{data:cd.map(x=>(+x.ctor||0)*100),backgroundColor:cd.map(x=>x.h.color),borderRadius:5}]
+    },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)+'%'}}},scales:{y:{ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(255,255,255,.07)'}},x:{grid:{display:false}}}}});
+  }
 }
 
 function drilldown(email,name){
