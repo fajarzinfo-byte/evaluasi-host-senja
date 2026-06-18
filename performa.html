@@ -767,11 +767,13 @@ function buildLeader(){
     `<div class="tab active" onclick="switchTab(this,'l-home')">Beranda</div>`+
     `<div class="tab" onclick="switchTab(this,'l-dash')">Dashboard Performa</div>`+
     `<div class="tab" onclick="switchTab(this,'l-compare')">Banding</div>`+
+    `<div class="tab" onclick="switchTab(this,'l-trend')">Tren</div>`+
     `<div class="tab" onclick="switchTab(this,'l-import')">Import Data</div>`;
   document.getElementById('panels').innerHTML =
     `<div class="panel active" id="l-home"><div id="leaderHome"><p class="empty">Memuat...</p></div></div>`+
     `<div class="panel" id="l-dash"><div id="dashContent"><p class="empty">Memuat...</p></div></div>`+
     `<div class="panel" id="l-compare"><div id="compareContent"><p class="empty">Memuat...</p></div></div>`+
+    `<div class="panel" id="l-trend"><div id="trendContent"><p class="empty">Memuat...</p></div></div>`+
     `<div class="panel" id="l-import">${importHTML()}</div>`;
   setupDrop();
   loadDash();
@@ -784,6 +786,7 @@ async function loadDash(){
   renderDash();
   renderLeaderHome();
   renderCompare();
+  renderTrend();
 }
 
 function renderLeaderHome(){
@@ -839,7 +842,12 @@ function renderLeaderHome(){
         <div class="menu-t">Bandingkan Host</div>
         <div class="menu-s">Adu metrik antar host per brand</div>
       </div>
-      <div class="menu-card" onclick="goLeaderTab('l-import',3)">
+      <div class="menu-card" onclick="goLeaderTab('l-trend',3)">
+        <div class="menu-ic" style="background:rgba(52,211,153,.15);color:#34d399">📈</div>
+        <div class="menu-t">Tren Brand</div>
+        <div class="menu-s">Naik/turun per brand tiap bulan</div>
+      </div>
+      <div class="menu-card" onclick="goLeaderTab('l-import',4)">
         <div class="menu-ic" style="background:rgba(167,139,250,.13);color:#a78bfa">📥</div>
         <div class="menu-t">Import Data</div>
         <div class="menu-s">Upload export TikTok per brand</div>
@@ -1025,6 +1033,115 @@ function renderCompare(){
       datasets:[{data:cd.map(x=>(+x.ctor||0)*100),backgroundColor:cd.map(x=>x.h.color),borderRadius:5}]
     },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)+'%'}}},scales:{y:{ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(255,255,255,.07)'}},x:{grid:{display:false}}}}});
   }
+}
+
+// ════════════════════════════════════
+// TREN BRAND (bulan ke bulan, per brand, bulan berjalan dilabeli)
+// ════════════════════════════════════
+const TREND_BRANDS=[
+  {name:'Onebear', color:'#e879f9'},
+  {name:'Supoe',   color:'#3b82f6'},
+  {name:'Momso',   color:'#f97316'},
+];
+const TREND_METRICS={
+  gmv: {label:'GMV',        type:'money', val:s=>s.gmv},
+  aov: {label:'AOV',        type:'money', val:s=>s.pembeli? s.gmv/s.pembeli : 0},
+  ctr: {label:'CTR',        type:'pct',   val:s=>s.imp? s.kl/s.imp : 0},
+  ctor:{label:'CTOR',       type:'pct',   val:s=>s.kl? s.pembeli/s.kl : 0},
+  eng: {label:'Engagement', type:'pct',   val:s=>s.vw? (s.likes+s.kom)/s.vw : 0},
+};
+
+function renderTrend(){
+  const box=document.getElementById('trendContent');
+  if(!box) return;
+
+  const metricKey=document.getElementById('trMetric')?.value || 'gmv';
+  const M=TREND_METRICS[metricKey];
+  const fmt = M.type==='money' ? rp : pct;
+
+  // all months across all brands, ascending
+  const months=[...new Set(allPerf.filter(r=>r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort();
+  const thisMonth=new Date().toISOString().slice(0,7);
+  const berjalanIdx=months.indexOf(thisMonth);          // -1 if current month has no data yet
+  const labels=months.map(m=>{const[y,mo]=m.split('-');return new Date(y,mo-1).toLocaleDateString('id-ID',{month:'short',year:'2-digit'})});
+  const berjalanLbl = berjalanIdx>=0 ? (()=>{const[y,mo]=thisMonth.split('-');return new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})})() : null;
+
+  // sums per brand per month
+  function brandMonth(brand,m){
+    const r=allPerf.filter(x=>x.brand===brand && x.tanggal && x.tanggal.startsWith(m));
+    if(!r.length) return null;
+    return r.reduce((a,x)=>{a.gmv+=+x.gmv||0;a.pembeli+=+x.pembeli||0;a.vw+=+x.viewers||0;a.imp+=+x.impresi||0;a.kl+=+x.klik_produk||0;a.likes+=+x.likes||0;a.kom+=+x.komentar||0;return a;},{gmv:0,pembeli:0,vw:0,imp:0,kl:0,likes:0,kom:0});
+  }
+
+  const series=TREND_BRANDS.map(b=>{
+    const data=months.map(m=>{const s=brandMonth(b.name,m); if(!s) return null; const v=M.val(s); return (M.type==='pct'&&v<=0)?null:v;});
+    return {b, data};
+  });
+
+  // MoM badge: pakai 2 bulan KOMPLIT terakhir (exclude bulan berjalan)
+  const completed=months.filter(m=>m!==thisMonth);
+  const lastC=completed[completed.length-1], prevC=completed[completed.length-2];
+  const badges=TREND_BRANDS.map(b=>{
+    if(!lastC||!prevC) return {b, txt:'butuh 2 bulan komplit', dir:0};
+    const sL=brandMonth(b.name,lastC), sP=brandMonth(b.name,prevC);
+    const vL=sL?M.val(sL):null, vP=sP?M.val(sP):null;
+    if(vL==null||vP==null||vP<=0) return {b, txt:'data kurang', dir:0};
+    const d=Math.round((vL/vP-1)*100);
+    return {b, txt:(d>=0?'+':'')+d+'%', dir:Math.sign(d), vL, vP};
+  });
+
+  const lastLbl = lastC ? (()=>{const[y,mo]=lastC.split('-');return new Date(y,mo-1).toLocaleDateString('id-ID',{month:'short',year:'2-digit'})})() : '';
+  const prevLbl = prevC ? (()=>{const[y,mo]=prevC.split('-');return new Date(y,mo-1).toLocaleDateString('id-ID',{month:'short',year:'2-digit'})})() : '';
+
+  let html=`
+    <div class="filter-row">
+      <select id="trMetric" onchange="renderTrend()">
+        ${Object.entries(TREND_METRICS).map(([k,v])=>`<option value="${k}" ${k===metricKey?'selected':''}>${v.label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="section-title">Tren ${M.label} per Brand</div>`;
+
+  if(months.length<2){
+    box.innerHTML=html+`<p class="empty">Butuh minimal 2 bulan data untuk lihat tren.</p>`;
+    if(charts.trend){try{charts.trend.destroy()}catch(e){}}
+    return;
+  }
+
+  // MoM badges
+  html+=`<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px">Perubahan ${prevLbl} → ${lastLbl} (bulan komplit terakhir)</div>
+    <div class="stats" style="margin-bottom:1rem">
+    ${badges.map(x=>{
+      const col = x.dir>0?'var(--good)':(x.dir<0?'#f87171':'var(--text3)');
+      const arr = x.dir>0?'▲':(x.dir<0?'▼':'');
+      return `<div class="stat"><div class="stat-l">${x.b.name}</div><div class="stat-v" style="color:${col};font-size:18px">${x.txt} ${arr}</div></div>`;
+    }).join('')}
+    </div>
+    <div class="chart-card"><h3>${M.label} bulan ke bulan</h3><div class="chart-wrap"><canvas id="chTrend"></canvas></div></div>`;
+
+  if(berjalanLbl){
+    html+=`<div style="font-size:11px;color:#f59e0b;margin-top:8px">⏳ ${berjalanLbl} masih berjalan — titik terakhir (garis putus-putus) belum lengkap, jadi tidak dipakai di perhitungan perubahan %.</div>`;
+  }
+
+  box.innerHTML=html;
+
+  // line chart
+  if(charts.trend){try{charts.trend.destroy()}catch(e){}}
+  charts.trend=new Chart(document.getElementById('chTrend'),{
+    type:'line',
+    data:{labels, datasets: series.map(s=>({
+      label:s.b.name,
+      data:s.data,
+      borderColor:s.b.color,
+      backgroundColor:s.b.color+'22',
+      tension:.3, pointRadius:3, spanGaps:true,
+      segment:{ borderDash: ctx => (berjalanIdx>=0 && ctx.p1DataIndex===berjalanIdx) ? [6,4] : undefined },
+    }))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#cbd5e1',font:{size:11},usePointStyle:true}},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y==null?'—':fmt(c.parsed.y)}`}}},
+      scales:{y:{ticks:{color:'#94a3b8',font:{size:10},callback:v=>M.type==='money'?('Rp'+(v/1e6).toFixed(1)+'jt'):((v*100).toFixed(1)+'%')},grid:{color:'rgba(255,255,255,.07)'}},
+        x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{display:false}}}}
+  });
 }
 
 function drilldown(email,name){
