@@ -1240,7 +1240,7 @@ function importHTML(){
   return `<div class="form-card">
     <div style="margin-bottom:14px;font-size:13px;color:var(--text2)">Upload file export TikTok LIVE (.xlsx). Sistem akan otomatis membagi data ke host &amp; sesi berdasarkan jam. Sesi error/kosong (GMV &amp; viewers = 0) otomatis dilewati.</div>
     <div class="fg" style="margin-bottom:14px"><label>Brand file ini</label>
-      <select id="impBrand" onchange="updateImpHosts()">
+      <select id="impBrand" onchange="updateImpHosts();reprocessIfLoaded()">
         <option value="Onebear">Onebear</option>
         <option value="Supoe">Supoe</option>
         <option value="Momso">Momso</option>
@@ -1271,6 +1271,8 @@ function updateImpHosts(){
 
 function setupDrop(){
   updateImpHosts();
+  document.getElementById('impPagi').onchange=reprocessIfLoaded;
+  document.getElementById('impSore').onchange=reprocessIfLoaded;
   const drop=document.getElementById('drop'), inp=document.getElementById('fileInput');
   drop.onclick=()=>inp.click();
   drop.ondragover=e=>{e.preventDefault();drop.classList.add('over');};
@@ -1280,6 +1282,8 @@ function setupDrop(){
 }
 
 let pendingRows=[];
+let lastRawRows=null;
+function reprocessIfLoaded(){ if(lastRawRows) processImport(lastRawRows); }
 function parseFile(file){
   const reader=new FileReader();
   reader.onload=e=>{
@@ -1320,6 +1324,7 @@ function normDate(d){
 }
 
 function processImport(rows){
+  lastRawRows=rows;
   const brand=document.getElementById('impBrand').value;
   const pagiEmail=document.getElementById('impPagi').value;
   const soreEmail=document.getElementById('impSore').value;
