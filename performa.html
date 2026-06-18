@@ -190,6 +190,15 @@
   .modal-x:hover{ color:var(--text); }
   .modal-content{ padding:18px 20px; overflow-y:auto; }
   .modal-foot{ display:flex; justify-content:flex-end; gap:10px; padding:14px 20px; border-top:1px solid var(--border); }
+  /* screenshot upload + viewer */
+  .ss-drop{ border:2px dashed var(--border2); border-radius:var(--r); padding:22px; text-align:center; cursor:pointer; transition:.15s; }
+  .ss-drop:hover{ border-color:var(--accent); background:var(--accent-bg); }
+  .ss-drop.over{ border-color:var(--accent); background:var(--accent-bg); }
+  .ss-view-overlay{ display:none; position:fixed; inset:0; background:rgba(3,2,9,.82); backdrop-filter:blur(4px); z-index:300; align-items:center; justify-content:center; padding:24px; }
+  .ss-view-overlay.open{ display:flex; }
+  .ss-view-overlay img{ max-width:94vw; max-height:88vh; border-radius:12px; box-shadow:0 30px 90px rgba(0,0,0,.7); }
+  .ss-view-x{ position:absolute; top:16px; right:20px; background:rgba(23,21,42,.8); border:1px solid var(--border2); color:var(--text); font-size:22px; line-height:1; width:40px; height:40px; border-radius:50%; cursor:pointer; }
+  .ss-thumb{ display:inline-block; height:46px; border-radius:6px; border:1px solid var(--border2); vertical-align:middle; cursor:pointer; }
   @media (prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important; } }
 
   .hero{ box-shadow:0 14px 40px rgba(0,0,0,.45)!important; border:1px solid rgba(167,139,250,.18)!important; }
@@ -236,6 +245,12 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- SCREENSHOT VIEWER -->
+<div class="ss-view-overlay" id="ssView" onclick="if(event.target.id==='ssView')closeSS()">
+  <button class="ss-view-x" onclick="closeSS()" title="Tutup">×</button>
+  <img id="ssViewImg" alt="screenshot dashboard" />
+</div>
+
 <!-- EDIT SESI MODAL -->
 <div class="modal-overlay" id="editModal">
   <div class="modal-box">
@@ -271,6 +286,15 @@
         <div class="fg"><label>Likes</label><input type="number" id="e_likes" placeholder="0" /></div>
         <div class="fg"><label>Komentar</label><input type="number" id="e_kom" placeholder="0" /></div>
         <div class="fg"></div>
+        <div class="fg full"><label>Screenshot Dashboard</label>
+          <div id="e_ss_current" style="margin-bottom:8px"></div>
+          <div class="ss-drop" id="e_ss_drop" style="padding:16px">
+            <input type="file" id="e_ss_file" accept="image/*" style="display:none" />
+            <div id="e_ss_prompt"><span style="font-size:20px">📷</span> <span class="drop-s">Klik untuk ganti screenshot</span></div>
+            <img id="e_ss_preview" alt="preview" style="display:none;max-width:100%;max-height:200px;border-radius:8px" />
+          </div>
+          <div class="hint">Kosongkan untuk tetap pakai yang lama.</div>
+        </div>
       </div>
     </div>
     <div class="modal-foot">
@@ -382,6 +406,7 @@ function buildHost(){
     `<div class="panel" id="p-mine"><div id="mineContent"><p class="empty">Memuat...</p></div></div>`;
   (function(){ const ft=document.getElementById('f_tanggal'); if(ft){ const d=new Date(); const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; ft.value=iso; ft.max=iso; } })();
   attachCalcListeners();
+  setupSSInput('f_ss_file','f_ss_drop','f_ss_prompt','f_ss_preview');
   loadHostData();
 }
 
@@ -490,6 +515,16 @@ function hostFormHTML(){
     <div class="fg"><label>Komentar</label><input type="number" id="f_kom" placeholder="0" /></div>
     <div class="fg"></div>
 
+    <div class="group-label">Screenshot Dashboard — opsional</div>
+    <div class="fg full">
+      <div class="ss-drop" id="f_ss_drop">
+        <input type="file" id="f_ss_file" accept="image/*" style="display:none" />
+        <div id="f_ss_prompt"><div style="font-size:24px;margin-bottom:4px">📷</div><div class="drop-t">Klik untuk pilih screenshot</div><div class="drop-s">Bukti angka dari TikTok LIVE Center</div></div>
+        <img id="f_ss_preview" alt="preview screenshot" style="display:none;max-width:100%;max-height:240px;border-radius:8px" />
+      </div>
+      <div class="hint" id="f_ss_hint">Otomatis dikompres biar hemat kuota. Boleh dikosongin.</div>
+    </div>
+
     <div class="calc-row" id="calcRow">
       <div class="calc"><div class="calc-l">AOV</div><div class="calc-v" id="c_aov">—</div></div>
       <div class="calc"><div class="calc-l">CTR</div><div class="calc-v" id="c_ctr">—</div></div>
@@ -520,12 +555,71 @@ function updateCalc(){
   document.getElementById('c_gmvjam').textContent = r.durasi_menit? rp(d.gmvjam):'—';
 }
 
+// ── Screenshot (kompres di browser + upload ke Supabase Storage) ──
+const SS_BUCKET='screenshots';
+function compressImage(file, maxW=1280, quality=0.7){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    img.onload=()=>{
+      let w=img.naturalWidth, h=img.naturalHeight;
+      if(w>maxW){ h=Math.round(h*maxW/w); w=maxW; }
+      const c=document.createElement('canvas'); c.width=w; c.height=h;
+      c.getContext('2d').drawImage(img,0,0,w,h);
+      c.toBlob(b=> b? resolve(b) : reject(new Error('kompres gagal')), 'image/jpeg', quality);
+      URL.revokeObjectURL(img.src);
+    };
+    img.onerror=()=>reject(new Error('file bukan gambar yang valid'));
+    img.src=URL.createObjectURL(file);
+  });
+}
+async function uploadScreenshot(file, email, tanggal, sesi){
+  const blob=await compressImage(file);
+  const safe=String(email).replace(/[^a-z0-9]/gi,'_');
+  const path=`${safe}/${tanggal}_s${sesi}_${Date.now()}.jpg`;
+  const {error}=await sb.storage.from(SS_BUCKET).upload(path, blob, {contentType:'image/jpeg'});
+  if(error) throw error;
+  return sb.storage.from(SS_BUCKET).getPublicUrl(path).data.publicUrl;
+}
+function setupSSInput(fileId, dropId, promptId, previewId){
+  const inp=document.getElementById(fileId), drop=document.getElementById(dropId);
+  if(!inp||!drop) return;
+  const show=f=>{
+    const prev=document.getElementById(previewId), pr=document.getElementById(promptId);
+    if(f){ prev.src=URL.createObjectURL(f); prev.style.display='block'; if(pr)pr.style.display='none'; }
+    else { prev.style.display='none'; if(pr)pr.style.display='block'; }
+  };
+  drop.onclick=()=>inp.click();
+  drop.ondragover=e=>{e.preventDefault();drop.classList.add('over');};
+  drop.ondragleave=()=>drop.classList.remove('over');
+  drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');const f=e.dataTransfer.files[0];if(f){inp.files=e.dataTransfer.files;show(f);}};
+  inp.onchange=()=>show(inp.files[0]);
+}
+function resetSSInput(fileId, promptId, previewId){
+  const inp=document.getElementById(fileId); if(inp) inp.value='';
+  const prev=document.getElementById(previewId), pr=document.getElementById(promptId);
+  if(prev){ prev.style.display='none'; prev.removeAttribute('src'); }
+  if(pr) pr.style.display='block';
+}
+
+// ── Image viewer ──
+function viewScreenshot(url){
+  document.getElementById('ssViewImg').src=url;
+  document.getElementById('ssView').classList.add('open');
+}
+function closeSS(){ document.getElementById('ssView').classList.remove('open'); document.getElementById('ssViewImg').removeAttribute('src'); }
+
 async function submitPerforma(){
   const me=HOST_MAP[ME];
   const v=id=>document.getElementById(id).value;
   const n=id=>+document.getElementById(id).value||0;
   if(!v('f_tanggal')){alert('Pilih tanggal dulu.');return;}
   if(n('f_gmv')===0 && n('f_viewers')===0){alert('Minimal isi GMV atau Viewers.');return;}
+  let screenshot_url=null;
+  const ssFile=document.getElementById('f_ss_file')?.files[0];
+  if(ssFile){
+    try{ showToast('Mengupload screenshot...','info'); screenshot_url=await uploadScreenshot(ssFile, ME, v('f_tanggal'), v('f_sesi')); }
+    catch(err){ showToast('Gagal upload screenshot: '+(err.message||err),'error'); return; }
+  }
   const payload={
     host:me.name, brand:me.brand, host_email:ME,
     tanggal:v('f_tanggal'), sesi:+v('f_sesi'),
@@ -533,11 +627,13 @@ async function submitPerforma(){
     viewers:n('f_viewers'), impresi:n('f_impresi'), klik_produk:n('f_klik'),
     avg_view_dur:n('f_avg'), durasi_menit:n('f_durasi_jam')*60+n('f_durasi_min'),
     followers_baru:n('f_foll'), likes:n('f_likes'), komentar:n('f_kom'),
+    screenshot_url,
   };
   const {error}=await sb.from('live_performance').insert([payload]);
   if(error){showToast('Gagal: '+error.message,'error');return;}
   showToast('Data sesi tersimpan!','success');
   ['f_gmv','f_pembeli','f_items','f_viewers','f_impresi','f_klik','f_avg','f_durasi_jam','f_durasi_min','f_foll','f_likes','f_kom'].forEach(id=>document.getElementById(id).value='');
+  resetSSInput('f_ss_file','f_ss_prompt','f_ss_preview');
   updateCalc();
   loadHostData();
 }
@@ -604,7 +700,7 @@ function renderPerfBody(ctx, allData, label, month){
     <div class="chart-card"><h3>GMV per sesi (rata-rata sesi 1–4)</h3><div class="chart-wrap sm"><canvas id="chSesi_${ctx}"></canvas></div></div>
     <div class="section-title">Riwayat Sesi</div>
     <div class="tbl-wrap"><div class="tbl-scroll"><table>
-      <thead><tr><th>Aksi</th><th>Tgl</th><th>Sesi</th><th class="num">GMV</th><th class="num">Pembeli</th><th class="num">Items</th><th class="num">Viewers</th><th class="num">Impresi</th><th class="num">Klik</th><th class="num">AvgDur</th><th class="num">Follow</th><th class="num">Likes</th><th class="num">Komen</th><th class="num">CTR</th><th class="num">CTOR</th><th class="num">GPM</th><th class="num">Eng</th></tr></thead>
+      <thead><tr><th>Aksi</th><th>Tgl</th><th>Sesi</th><th class="num">GMV</th><th class="num">Pembeli</th><th class="num">Items</th><th class="num">Viewers</th><th class="num">Impresi</th><th class="num">Klik</th><th class="num">AvgDur</th><th class="num">Follow</th><th class="num">Likes</th><th class="num">Komen</th><th class="num">CTR</th><th class="num">CTOR</th><th class="num">GPM</th><th class="num">Eng</th><th class="num">SS</th></tr></thead>
       <tbody>${[...data].reverse().map(r=>{const d=derive(r);return `<tr>
         <td style="white-space:nowrap"><button class="row-btn" onclick="openEditSesi('${r.id}')" title="Edit sesi">✏️</button>${ROLE==='leader'?`<button class="row-btn del" onclick="deleteSesi('${r.id}')" title="Hapus sesi">🗑️</button>`:''}</td>
         <td>${fmtTgl(r.tanggal)}</td><td>S${r.sesi}</td>
@@ -613,6 +709,7 @@ function renderPerfBody(ctx, allData, label, month){
         <td class="num">${(+r.avg_view_dur||0).toFixed(0)}</td><td class="num">${r.followers_baru||0}</td><td class="num">${(r.likes||0).toLocaleString('id-ID')}</td><td class="num">${r.komentar||0}</td>
         <td class="num">${r.impresi?pct(d.ctr):'—'}</td><td class="num">${r.klik_produk?pct(d.ctor):'—'}</td>
         <td class="num">${r.impresi?rp(d.gpm):'—'}</td><td class="num">${r.viewers?pct(d.eng):'—'}</td>
+        <td class="num">${r.screenshot_url?`<button class="row-btn" onclick="viewScreenshot('${r.screenshot_url}')" title="Lihat screenshot">📷</button>`:'<span style="color:var(--text3)">—</span>'}</td>
       </tr>`}).join('')}</tbody>
     </table></div></div>`;
 
@@ -814,8 +911,19 @@ function openEditSesi(id){
   set('e_durasi_jam', m?Math.floor(m/60):''); set('e_durasi_min', m? m%60 : '');
   set('e_viewers',r.viewers); set('e_impresi',r.impresi); set('e_klik',r.klik_produk);
   set('e_avg',r.avg_view_dur); set('e_foll',r.followers_baru); set('e_likes',r.likes); set('e_kom',r.komentar);
+  // screenshot
+  _editSSUrl = r.screenshot_url || null;
+  resetSSInput('e_ss_file','e_ss_prompt','e_ss_preview');
+  setupSSInput('e_ss_file','e_ss_drop','e_ss_prompt','e_ss_preview');
+  const cur=document.getElementById('e_ss_current');
+  cur.innerHTML = _editSSUrl
+    ? `<img src="${_editSSUrl}" class="ss-thumb" style="height:60px" onclick="viewScreenshot('${_editSSUrl}')" title="Lihat" /> <button class="row-btn del" onclick="markSSRemove(this)" type="button">Hapus screenshot</button>`
+    : `<span class="hint">Belum ada screenshot.</span>`;
+  _editSSRemove=false;
   document.getElementById('editModal').classList.add('open');
 }
+let _editSSUrl=null, _editSSRemove=false;
+function markSSRemove(btn){ _editSSRemove=true; document.getElementById('e_ss_current').innerHTML='<span class="hint" style="color:var(--bad)">Screenshot akan dihapus saat disimpan.</span>'; }
 function closeEditModal(){ document.getElementById('editModal').classList.remove('open'); _editId=null; }
 
 async function saveEditSesi(){
@@ -823,12 +931,19 @@ async function saveEditSesi(){
   const v=id=>document.getElementById(id).value;
   const n=id=>+document.getElementById(id).value||0;
   if(!v('e_tanggal')){ alert('Tanggal tidak boleh kosong.'); return; }
+  let screenshot_url = _editSSRemove ? null : _editSSUrl;
+  const newFile=document.getElementById('e_ss_file')?.files[0];
+  if(newFile){
+    try{ showToast('Mengupload screenshot...','info'); screenshot_url=await uploadScreenshot(newFile, ME||'leader', v('e_tanggal'), v('e_sesi')); }
+    catch(err){ showToast('Gagal upload screenshot: '+(err.message||err),'error'); return; }
+  }
   const payload={
     tanggal:v('e_tanggal'), sesi:+v('e_sesi'),
     gmv:n('e_gmv'), pembeli:n('e_pembeli'), items:n('e_items'),
     viewers:n('e_viewers'), impresi:n('e_impresi'), klik_produk:n('e_klik'),
     avg_view_dur:n('e_avg'), durasi_menit:n('e_durasi_jam')*60+n('e_durasi_min'),
     followers_baru:n('e_foll'), likes:n('e_likes'), komentar:n('e_kom'),
+    screenshot_url,
   };
   const {data,error}=await sb.from('live_performance').update(payload).eq('id',_editId).select();
   if(error){ showToast('Gagal menyimpan: '+error.message,'error'); return; }
