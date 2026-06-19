@@ -1238,7 +1238,7 @@ async function afterPerfChange(){
 // ── Import ──
 function importHTML(){
   return `<div class="form-card">
-    <div style="margin-bottom:14px;font-size:13px;color:var(--text2)">Upload file Tracker (sheet Input Per Sesi) <b>atau</b> export mentah Creator Live Performance (.xlsx) — format terdeteksi otomatis. Sistem membagi data ke host &amp; sesi berdasarkan jam. Sesi kosong (GMV &amp; viewers = 0) otomatis dilewati.</div>
+    <div style="margin-bottom:14px;font-size:13px;color:var(--text2)">Upload file export TikTok LIVE (.xlsx). Sistem akan otomatis membagi data ke host &amp; sesi berdasarkan jam. Sesi error/kosong (GMV &amp; viewers = 0) otomatis dilewati.</div>
     <div class="fg" style="margin-bottom:14px"><label>Brand file ini</label>
       <select id="impBrand" onchange="updateImpHosts()">
         <option value="Onebear">Onebear</option>
@@ -1319,93 +1319,40 @@ function normDate(d){
   return null;
 }
 
-// Parser angka lokal Indonesia: "Rp175,4RB" -> 175400, "1.30K" -> 1300, "12,5JT" -> 12500000
-function parseIDNum(v){
-  if(v==null||v==='')return 0;
-  let s=String(v).trim().replace(/rp/ig,'').replace(/\s/g,'');
-  if(s===''||s==='-')return 0;
-  let mult=1; const up=s.toUpperCase();
-  if(/RB$/.test(up)){mult=1e3;s=s.slice(0,-2);}
-  else if(/JUTA$/.test(up)){mult=1e6;s=s.slice(0,-4);}
-  else if(/JT$/.test(up)){mult=1e6;s=s.slice(0,-2);}
-  else if(/K$/.test(up)){mult=1e3;s=s.slice(0,-1);}
-  else if(/M$/.test(up)){mult=1e6;s=s.slice(0,-1);}
-  if(s.includes(',')&&s.includes('.')){
-    if(s.lastIndexOf(',')>s.lastIndexOf('.')) s=s.replace(/\./g,'').replace(',','.');
-    else s=s.replace(/,/g,'');
-  } else if(s.includes(',')){ s=s.replace(',','.'); }
-  else if((s.match(/\./g)||[]).length>1){ s=s.replace(/\./g,''); }
-  const n=parseFloat(s.replace(/[^\d.\-]/g,''));
-  return isNaN(n)?0:n*mult;
-}
-// durasi tonton rata-rata -> detik (mis. "9.65s")
-function parseSec(v){ if(v==null)return 0; const n=parseFloat(String(v).replace(/[^\d.,]/g,'').replace(',','.')); return isNaN(n)?0:n; }
-// selisih menit antara dua timestamp (Start/End Time)
-function diffMin(a,b){ const d1=new Date(String(a).replace(/-/g,'/')), d2=new Date(String(b).replace(/-/g,'/')); const m=(d2-d1)/60000; return (isFinite(m)&&m>0)?Math.round(m):0; }
-
 function processImport(rows){
   const brand=document.getElementById('impBrand').value;
   const pagiEmail=document.getElementById('impPagi').value;
   const soreEmail=document.getElementById('impSore').value;
   const pagi=ALL_HOSTS.find(h=>h.email===pagiEmail), sore=ALL_HOSTS.find(h=>h.email===soreEmail);
-  if(!pagi||!sore){ showToast('Pilih host pagi & sore dulu.','error'); return; }
-  const norm=r=>r?r.map(c=>String(c==null?'':c).replace(/\n/g,' ').trim()):[];
 
-  // Deteksi format: A=Tracker (Tanggal+Waktu), B=Creator mentah (Start Time+Attributed GMV)
+  // find header row: row containing 'Tanggal' and 'Waktu'
   let hi=rows.findIndex(r=>r&&r.some(c=>String(c).trim()==='Tanggal')&&r.some(c=>String(c).includes('Waktu')));
-  let hiC=rows.findIndex(r=>r&&r.some(c=>/start time/i.test(String(c)))&&r.some(c=>/attributed gmv/i.test(String(c))));
+  if(hi<0){ showToast('Format tidak dikenali (tidak ada kolom Tanggal/Waktu).','error'); return; }
+  const head=rows[hi].map(c=>String(c).replace(/\n/g,' ').trim());
+  const col=name=>head.findIndex(h=>h.toLowerCase().includes(name.toLowerCase()));
+  const ci={ tgl:col('Tanggal'), wkt:col('Waktu'), dur:col('Durasi'), gmv:col('GMV'), pemb:col('Pembeli'),
+    items:col('Items'), view:col('Viewers'), imp:col('Impresi'), klik:col('Klik'),
+    avg:col('Avg Watch'), foll:col('Pengikut'), likes:col('Likes'), kom:col('Komentar') };
 
-  pendingRows=[]; let dropped=0;
-
-  if(hi>=0){
-    // ── Format A: Tracker (Input Per Sesi) ──
-    const head=norm(rows[hi]);
-    const col=name=>head.findIndex(h=>h.toLowerCase().includes(name.toLowerCase()));
-    const ci={ tgl:col('Tanggal'), wkt:col('Waktu'), dur:col('Durasi'), gmv:col('GMV'), pemb:col('Pembeli'),
-      items:col('Items'), view:col('Viewers'), imp:col('Impresi'), klik:col('Klik'),
-      avg:col('Avg Watch'), foll:col('Pengikut'), likes:col('Likes'), kom:col('Komentar') };
-    for(let i=hi+1;i<rows.length;i++){
-      const r=rows[i]; if(!r||!r[ci.tgl]||!r[ci.wkt])continue;
-      const tanggal=normDate(r[ci.tgl]); const mins=timeToMin(r[ci.wkt]);
-      if(!tanggal||mins==null)continue;
-      const sesi=assignSesi(mins); const who=sesi<=2?pagi:sore;
-      const gmv=parseIDNum(r[ci.gmv]), viewers=parseIDNum(r[ci.view]);
-      if(gmv===0 && viewers===0){ dropped++; continue; }
-      pendingRows.push({ host:who.name, brand, host_email:who.email, tanggal, sesi,
-        gmv, pembeli:parseIDNum(r[ci.pemb]), items:parseIDNum(r[ci.items]),
-        viewers, impresi:parseIDNum(r[ci.imp]), klik_produk:parseIDNum(r[ci.klik]),
-        avg_view_dur:parseSec(r[ci.avg]), durasi_menit:parseIDNum(r[ci.dur]),
-        followers_baru:parseIDNum(r[ci.foll]), likes:parseIDNum(r[ci.likes]), komentar:parseIDNum(r[ci.kom]) });
-    }
-  } else if(hiC>=0){
-    // ── Format B: Creator Live Performance (export mentah TikTok) ──
-    const head=norm(rows[hiC]);
-    const col=name=>head.findIndex(h=>h.toLowerCase()===name.toLowerCase());
-    const colInc=name=>head.findIndex(h=>h.toLowerCase().includes(name.toLowerCase()));
-    // impresi <- "Impressions" (LIVE), klik <- "Product clicks" -> cocok dgn Tracker
-    const ci={ start:colInc('start time'), end:colInc('end time'), gmv:colInc('attributed gmv'),
-      pemb:col('customers'), items:colInc('attributed items'), view:col('views'),
-      imp:col('impressions'), klik:colInc('product clicks'),
-      avg:colInc('avg. viewing duration per view'), foll:colInc('new followers'),
-      likes:col('likes'), kom:col('comments') };
-    for(let i=hiC+1;i<rows.length;i++){
-      const r=rows[i]; if(!r||!r[ci.start])continue;
-      const tanggal=normDate(r[ci.start]); const mins=timeToMin(r[ci.start]);
-      if(!tanggal||mins==null)continue;
-      const sesi=assignSesi(mins); const who=sesi<=2?pagi:sore;
-      const gmv=parseIDNum(r[ci.gmv]), viewers=parseIDNum(r[ci.view]);
-      if(gmv===0 && viewers===0){ dropped++; continue; }
-      pendingRows.push({ host:who.name, brand, host_email:who.email, tanggal, sesi,
-        gmv, pembeli:parseIDNum(r[ci.pemb]), items:parseIDNum(r[ci.items]),
-        viewers, impresi:parseIDNum(r[ci.imp]), klik_produk:parseIDNum(r[ci.klik]),
-        avg_view_dur:parseSec(r[ci.avg]), durasi_menit:(ci.end>=0?diffMin(r[ci.start],r[ci.end]):0),
-        followers_baru:parseIDNum(r[ci.foll]), likes:parseIDNum(r[ci.likes]), komentar:parseIDNum(r[ci.kom]) });
-    }
-  } else {
-    showToast('Format tidak dikenali. Pakai file Tracker (Input Per Sesi) atau export Creator Live Performance.','error');
-    return;
+  const num=v=>{ if(v==null||v==='')return 0; const n=parseFloat(String(v).replace(/[^\d.-]/g,'')); return isNaN(n)?0:n; };
+  pendingRows=[];
+  let dropped=0;
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i]; if(!r||!r[ci.tgl]||!r[ci.wkt])continue;
+    const tanggal=normDate(r[ci.tgl]); const mins=timeToMin(r[ci.wkt]);
+    if(!tanggal||mins==null)continue;
+    const sesi=assignSesi(mins);
+    const who = sesi<=2? pagi : sore;
+    const gmv=num(r[ci.gmv]), viewers=num(r[ci.view]);
+    if(gmv===0 && viewers===0){ dropped++; continue; }
+    pendingRows.push({
+      host:who.name, brand, host_email:who.email, tanggal, sesi,
+      gmv, pembeli:Math.round(num(r[ci.pemb])), items:Math.round(num(r[ci.items])),
+      viewers:Math.round(viewers), impresi:Math.round(num(r[ci.imp])), klik_produk:Math.round(num(r[ci.klik])),
+      avg_view_dur:Math.round(num(r[ci.avg])), durasi_menit:Math.round(num(r[ci.dur])),
+      followers_baru:Math.round(num(r[ci.foll])), likes:Math.round(num(r[ci.likes])), komentar:Math.round(num(r[ci.kom])),
+    });
   }
-  if(!pendingRows.length){ showToast('Tidak ada sesi valid yang bisa diimport.','error'); document.getElementById('impPreview').innerHTML=''; return; }
   // preview
   const byHost={};
   pendingRows.forEach(p=>{byHost[p.host]=(byHost[p.host]||0)+1;});
