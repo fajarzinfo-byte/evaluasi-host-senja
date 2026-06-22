@@ -1289,7 +1289,7 @@ async function afterPerfChange(){
 // ── Import ──
 function importHTML(){
   return `<div class="form-card">
-    <div style="margin-bottom:14px;font-size:13px;color:var(--text2)">Upload file export TikTok LIVE (.xlsx). Sistem akan otomatis membagi data ke host &amp; sesi berdasarkan jam. Sesi error/kosong (GMV &amp; viewers = 0) otomatis dilewati.</div>
+    <div style="margin-bottom:14px;font-size:13px;color:var(--text2)">Upload export <b>TikTok LIVE (.xlsx)</b> atau <b>Shopee (.csv)</b>. Format dideteksi otomatis. Sistem membagi data ke host &amp; sesi berdasarkan jam. Sesi error/kosong (GMV &amp; viewers = 0) otomatis dilewati. <span style="color:var(--text3)">Shopee suka pisah jadi beberapa file — import satu per satu.</span></div>
     <div class="fg" style="margin-bottom:14px"><label>Brand file ini</label>
       <select id="impBrand" onchange="updateImpHosts();reprocessIfLoaded()">
         <option value="Onebear">Onebear</option>
@@ -1303,9 +1303,9 @@ function importHTML(){
     </div>
     <div class="drop" id="drop">
       <div class="drop-icon">📄</div>
-      <div class="drop-t">Klik atau drag file .xlsx ke sini</div>
-      <div class="drop-s">File export TikTok LIVE Seller Center</div>
-      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" />
+      <div class="drop-t">Klik atau drag file ke sini</div>
+      <div class="drop-s">.xlsx (TikTok LIVE) atau .csv (Shopee Confirmed Order)</div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none" />
     </div>
     <div id="impPreview"></div>
   </div>`;
@@ -1334,20 +1334,77 @@ function setupDrop(){
 
 let pendingRows=[];
 let lastRawRows=null;
-function reprocessIfLoaded(){ if(lastRawRows) processImport(lastRawRows); }
+function reprocessIfLoaded(){ if(lastRawRows) routeImport(lastRawRows); }
 function parseFile(file){
   const reader=new FileReader();
+  const isCsv=/\.csv$/i.test(file.name||'');
   reader.onload=e=>{
     try{
-      const wb=XLSX.read(e.target.result,{type:'array'});
-      // find the input sheet (first sheet with 'Input' or just first)
-      let sheetName=wb.SheetNames.find(n=>n.includes('Input'))||wb.SheetNames[0];
-      const ws=wb.Sheets[sheetName];
-      const rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});
-      processImport(rows);
+      let rows;
+      if(isCsv){
+        rows=parseCSV(String(e.target.result));
+      }else{
+        const wb=XLSX.read(e.target.result,{type:'array'});
+        // find the input sheet (first sheet with 'Input' or just first)
+        let sheetName=wb.SheetNames.find(n=>n.includes('Input'))||wb.SheetNames[0];
+        const ws=wb.Sheets[sheetName];
+        rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});
+      }
+      routeImport(rows);
     }catch(err){ showToast('Gagal baca file: '+err.message,'error'); }
   };
-  reader.readAsArrayBuffer(file);
+  if(isCsv) reader.readAsText(file); else reader.readAsArrayBuffer(file);
+}
+
+// ── Router: deteksi format Shopee vs TikTok-tracker ──
+function isShopeeRows(rows){
+  return rows.some(r=>r&&r.some(c=>{const s=String(c).trim(); return s==='Sales(Confirmed Order)'||s==='Start Time';}));
+}
+function routeImport(rows){
+  lastRawRows=rows;
+  if(isShopeeRows(rows)) processImportShopee(rows);
+  else processImport(rows);
+}
+
+// ── CSV parser (handle BOM, quoted fields, koma di dalam tanda kutip, CRLF) ──
+function parseCSV(text){
+  text=text.replace(/^\uFEFF/,'');
+  const rows=[]; let row=[], cur='', inQ=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'){ if(text[i+1]==='"'){cur+='"';i++;} else inQ=false; }
+      else cur+=c;
+    }else{
+      if(c==='"') inQ=true;
+      else if(c===','){ row.push(cur); cur=''; }
+      else if(c==='\n'){ row.push(cur); rows.push(row); row=[]; cur=''; }
+      else if(c==='\r'){ /* skip */ }
+      else cur+=c;
+    }
+  }
+  if(cur!==''||row.length){ row.push(cur); rows.push(row); }
+  return rows;
+}
+// Angka format Indonesia: titik=ribuan, koma=desimal. Buang 'Rp'. "Rp594.177"→594177, "179.693,65"→179693.65
+function parseRpID(v){
+  if(v==null) return 0;
+  let s=String(v).trim().replace(/rp/i,'').replace(/\s/g,'');
+  if(s===''||s==='-') return 0;
+  s=s.replace(/\./g,'').replace(',','.');
+  const n=parseFloat(s.replace(/[^\d.-]/g,''));
+  return isNaN(n)?0:n;
+}
+// "31-05-2026 18:25" → {tanggal:'2026-05-31', mins: 1105}
+function parseShopeeStart(v){
+  const m=String(v||'').trim().match(/(\d{1,2})-(\d{1,2})-(\d{4})\s+(\d{1,2}):(\d{2})/);
+  if(!m) return null;
+  return { tanggal:`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`, mins:(+m[4])*60+(+m[5]) };
+}
+// "HH:MM:SS" → detik
+function hmsToSec(v){
+  const m=String(v||'').match(/(\d{1,2}):(\d{2}):(\d{2})/);
+  return m? (+m[1])*3600+(+m[2])*60+(+m[3]) : 0;
 }
 
 function timeToMin(t){
@@ -1402,7 +1459,7 @@ function processImport(rows){
     const gmv=num(r[ci.gmv]), viewers=num(r[ci.view]);
     if(gmv===0 && viewers===0){ dropped++; continue; }
     pendingRows.push({
-      host:who.name, brand, host_email:who.email, tanggal, sesi,
+      host:who.name, brand, host_email:who.email, tanggal, sesi, platform:'tiktok',
       gmv, pembeli:Math.round(num(r[ci.pemb])), items:Math.round(num(r[ci.items])),
       viewers:Math.round(viewers), impresi:Math.round(num(r[ci.imp])), klik_produk:Math.round(num(r[ci.klik])),
       avg_view_dur:Math.round(num(r[ci.avg])), durasi_menit:Math.round(num(r[ci.dur])),
@@ -1424,6 +1481,69 @@ function processImport(rows){
     </table></div></div>
     ${pendingRows.length>8?`<div style="font-size:12px;color:var(--text3);margin:6px 0 12px">…dan ${pendingRows.length-8} sesi lainnya</div>`:'<div style="height:12px"></div>'}
     <button class="btn-accent" onclick="confirmImport()">Import ${pendingRows.length} Sesi ke Database</button>`;
+}
+
+// ── Importer Shopee (CSV Confirmed Order, per-live) ──
+function processImportShopee(rows){
+  const brand=document.getElementById('impBrand').value;
+  const pagiEmail=document.getElementById('impPagi').value;
+  const soreEmail=document.getElementById('impSore').value;
+  const pagi=ALL_HOSTS.find(h=>h.email===pagiEmail), sore=ALL_HOSTS.find(h=>h.email===soreEmail);
+
+  // header row: ada 'Start Time' & 'Sales(Confirmed Order)'
+  let hi=rows.findIndex(r=>r&&r.some(c=>String(c).trim()==='Start Time')&&r.some(c=>String(c).trim()==='Sales(Confirmed Order)'));
+  if(hi<0){ showToast('Format Shopee tidak dikenali (header Start Time / Sales(Confirmed Order) tidak ada).','error'); return; }
+  const head=rows[hi].map(c=>String(c).trim());
+  // exact match dulu (penting: Confirmed bukan Placed, Viewers bukan Engaged Viewers)
+  const col=nm=>head.findIndex(h=>h.toLowerCase()===nm.toLowerCase());
+  const ci={
+    start: col('Start Time'),
+    dur:   col('Duration'),
+    kom:   col('Comments'),
+    atc:   col('ATC'),
+    avg:   col('Avg. Viewing Duration'),
+    view:  col('Viewers'),
+    pemb:  col('Orders(Confirmed Order)'),
+    items: col('Items Sold(Confirmed Order)'),
+    gmv:   col('Sales(Confirmed Order)'),
+  };
+  if(ci.start<0||ci.gmv<0){ showToast('Kolom Start Time / Sales(Confirmed Order) tidak ketemu.','error'); return; }
+
+  pendingRows=[];
+  let dropped=0;
+  for(let i=hi+1;i<rows.length;i++){
+    const r=rows[i]; if(!r||!r[ci.start])continue;
+    const st=parseShopeeStart(r[ci.start]);
+    if(!st)continue;
+    const sesi=assignSesi(st.mins);
+    const who=sesi<=2? pagi : sore;
+    const gmv=parseRpID(r[ci.gmv]);
+    const viewers=Math.round(parseRpID(r[ci.view]));
+    if(gmv===0 && viewers===0){ dropped++; continue; }
+    pendingRows.push({
+      host:who.name, brand, host_email:who.email, tanggal:st.tanggal, sesi, platform:'shopee',
+      gmv, pembeli:Math.round(parseRpID(r[ci.pemb])), items:Math.round(parseRpID(r[ci.items])),
+      viewers, komentar:Math.round(parseRpID(r[ci.kom])), atc:ci.atc>=0?Math.round(parseRpID(r[ci.atc])):0,
+      avg_view_dur:hmsToSec(r[ci.avg]), durasi_menit:Math.round(hmsToSec(r[ci.dur])/60),
+      impresi:0, klik_produk:0, likes:0, followers_baru:0,
+    });
+  }
+
+  const byHost={};
+  pendingRows.forEach(p=>{byHost[p.host]=(byHost[p.host]||0)+1;});
+  const summary=Object.entries(byHost).map(([h,c])=>`${h}: ${c} sesi`).join(' · ');
+  document.getElementById('impPreview').innerHTML=`
+    <div style="margin-top:16px;padding:14px;background:var(--goodbg);border:1px solid var(--goodbd);border-radius:var(--r)">
+      <div style="font-weight:600;color:var(--good);margin-bottom:4px">✓ ${pendingRows.length} sesi Shopee siap diimport (${dropped} dilewati) <span class="badge" style="background:#ee4d2d22;color:#ff7a59;border-color:#ee4d2d55">Shopee</span></div>
+      <div style="font-size:12px;color:var(--text2)">${summary||'—'}</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px">Impresi/Klik/Likes/Followers tidak ada di export Shopee → diisi 0. GMV pakai Confirmed Order.</div>
+    </div>
+    <div class="tbl-wrap" style="margin-top:12px"><div class="tbl-scroll"><table>
+      <thead><tr><th>Tgl</th><th>Host</th><th>Sesi</th><th class="num">GMV</th><th class="num">Pembeli</th><th class="num">Viewers</th><th class="num">ATC</th></tr></thead>
+      <tbody>${pendingRows.slice(0,8).map(p=>`<tr><td>${fmtTgl(p.tanggal)}</td><td>${p.host}</td><td>S${p.sesi}</td><td class="num">${rp(p.gmv)}</td><td class="num">${p.pembeli}</td><td class="num">${p.viewers.toLocaleString('id-ID')}</td><td class="num">${p.atc}</td></tr>`).join('')}</tbody>
+    </table></div></div>
+    ${pendingRows.length>8?`<div style="font-size:12px;color:var(--text3);margin:6px 0 12px">…dan ${pendingRows.length-8} sesi lainnya</div>`:'<div style="height:12px"></div>'}
+    ${pendingRows.length?`<button class="btn-accent" onclick="confirmImport()">Import ${pendingRows.length} Sesi Shopee ke Database</button>`:''}`;
 }
 
 async function confirmImport(){
