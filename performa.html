@@ -260,6 +260,10 @@
     </div>
     <div class="modal-content">
       <div class="form-grid">
+        <div class="fg"><label>Platform</label><select id="e_platform" onchange="applyEditPlatform()">
+          <option value="tiktok">TikTok</option>
+          <option value="shopee">Shopee</option>
+        </select></div>
         <div class="fg"><label>Tanggal</label><input type="date" id="e_tanggal" /></div>
         <div class="fg"><label>Sesi</label><select id="e_sesi">
           <option value="1">Sesi 1 (07:00–10:00)</option>
@@ -279,8 +283,9 @@
           </div>
         </div>
         <div class="fg"><label>Viewers</label><input type="number" id="e_viewers" placeholder="0" /></div>
-        <div class="fg"><label>Impresi</label><input type="number" id="e_impresi" placeholder="0" /></div>
+        <div class="fg" id="fg_e_impresi"><label>Impresi</label><input type="number" id="e_impresi" placeholder="0" /></div>
         <div class="fg"><label>Klik Produk</label><input type="number" id="e_klik" placeholder="0" /></div>
+        <div class="fg" id="fg_e_atc" style="display:none"><label>ATC <span class="hint" style="display:inline;margin:0">(Add to Cart)</span></label><input type="number" id="e_atc" placeholder="0" /></div>
         <div class="fg"><label>Avg View Dur (dtk)</label><input type="number" id="e_avg" placeholder="0" /></div>
         <div class="fg"><label>Followers Baru</label><input type="number" id="e_foll" placeholder="0" /></div>
         <div class="fg"><label>Likes</label><input type="number" id="e_likes" placeholder="0" /></div>
@@ -349,8 +354,11 @@ function derive(r){
     gpm: impresi? gmv/impresi*1000 : 0,
     eng: viewers? (likes+komentar)/viewers : 0,
     gmvjam: durasi? gmv/(durasi/60) : 0,
+    klik_per_viewer: viewers? klik/viewers : 0,   // Shopee: pengganti CTR (JANGAN dilabeli CTR)
   };
 }
+// platform helper: data lama tanpa kolom platform dianggap 'tiktok'
+const platOf = r => (r && r.platform) || 'tiktok';
 
 // ── Login ──
 async function doLogin(){
@@ -482,6 +490,10 @@ function renderMine(){
 function hostFormHTML(){
   return `<div class="form-card"><div class="form-grid">
     <div class="group-label">Info Sesi</div>
+    <div class="fg"><label>Platform</label><select id="f_platform" onchange="applyFormPlatform()">
+      <option value="tiktok">TikTok</option>
+      <option value="shopee">Shopee</option>
+    </select></div>
     <div class="fg"><label>Tanggal</label><input type="date" id="f_tanggal" /></div>
     <div class="fg"><label>Sesi</label><select id="f_sesi">
       <option value="1">Sesi 1 (07:00–10:00)</option>
@@ -505,8 +517,9 @@ function hostFormHTML(){
 
     <div class="group-label">Traffic</div>
     <div class="fg"><label>Viewers</label><input type="number" id="f_viewers" placeholder="0" /></div>
-    <div class="fg"><label>Impresi</label><input type="number" id="f_impresi" placeholder="0" /></div>
+    <div class="fg" id="fg_f_impresi"><label>Impresi</label><input type="number" id="f_impresi" placeholder="0" /></div>
     <div class="fg"><label>Klik Produk</label><input type="number" id="f_klik" placeholder="0" /></div>
+    <div class="fg" id="fg_f_atc" style="display:none"><label>ATC <span class="hint" style="display:inline;margin:0">(Add to Cart)</span></label><input type="number" id="f_atc" placeholder="0" /></div>
     <div class="fg"><label>Avg View Duration (dtk)</label><input type="number" id="f_avg" placeholder="0" /></div>
 
     <div class="group-label">Engagement</div>
@@ -527,9 +540,9 @@ function hostFormHTML(){
 
     <div class="calc-row" id="calcRow">
       <div class="calc"><div class="calc-l">AOV</div><div class="calc-v" id="c_aov">—</div></div>
-      <div class="calc"><div class="calc-l">CTR</div><div class="calc-v" id="c_ctr">—</div></div>
+      <div class="calc"><div class="calc-l" id="c_ctr_l">CTR</div><div class="calc-v" id="c_ctr">—</div></div>
       <div class="calc"><div class="calc-l">CTOR</div><div class="calc-v" id="c_ctor">—</div></div>
-      <div class="calc"><div class="calc-l">GPM</div><div class="calc-v" id="c_gpm">—</div></div>
+      <div class="calc" id="cell_gpm"><div class="calc-l">GPM</div><div class="calc-v" id="c_gpm">—</div></div>
       <div class="calc"><div class="calc-l">Engagement</div><div class="calc-v" id="c_eng">—</div></div>
       <div class="calc"><div class="calc-l">GMV / Jam</div><div class="calc-v" id="c_gmvjam">—</div></div>
     </div>
@@ -538,18 +551,33 @@ function hostFormHTML(){
 }
 
 function attachCalcListeners(){
-  ['f_gmv','f_pembeli','f_impresi','f_klik','f_viewers','f_likes','f_kom','f_durasi_jam','f_durasi_min'].forEach(id=>{
+  ['f_gmv','f_pembeli','f_impresi','f_klik','f_atc','f_viewers','f_likes','f_kom','f_durasi_jam','f_durasi_min'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.addEventListener('input',updateCalc);
   });
+  applyFormPlatform();
+}
+// Shopee: buang Impresi, tampilkan ATC, label CTR→Klik/Viewer, sembunyikan GPM
+function applyFormPlatform(){
+  const isS=(document.getElementById('f_platform')?.value)==='shopee';
+  const setDisp=(id,show)=>{const el=document.getElementById(id); if(el) el.style.display=show?'':'none';};
+  setDisp('fg_f_impresi',!isS);
+  setDisp('fg_f_atc',isS);
+  updateCalc();
 }
 function updateCalc(){
-  const v=id=>+document.getElementById(id).value||0;
+  const v=id=>+document.getElementById(id)?.value||0;
+  const isS=(document.getElementById('f_platform')?.value)==='shopee';
   const r={gmv:v('f_gmv'),pembeli:v('f_pembeli'),impresi:v('f_impresi'),klik_produk:v('f_klik'),
            viewers:v('f_viewers'),likes:v('f_likes'),komentar:v('f_kom'),durasi_menit:v('f_durasi_jam')*60+v('f_durasi_min')};
   const d=derive(r);
   document.getElementById('c_aov').textContent = r.pembeli? rp(d.aov):'—';
-  document.getElementById('c_ctr').textContent = r.impresi? pct(d.ctr):'—';
+  // CTR (TikTok) vs Klik/Viewer (Shopee)
+  document.getElementById('c_ctr_l').textContent = isS?'Klik/Viewer':'CTR';
+  document.getElementById('c_ctr').textContent = isS
+    ? (r.viewers? pct(d.klik_per_viewer):'—')
+    : (r.impresi? pct(d.ctr):'—');
   document.getElementById('c_ctor').textContent = r.klik_produk? pct(d.ctor):'—';
+  document.getElementById('cell_gpm').style.display = isS?'none':'';
   document.getElementById('c_gpm').textContent = r.impresi? rp(d.gpm):'—';
   document.getElementById('c_eng').textContent = r.viewers? pct(d.eng):'—';
   document.getElementById('c_gmvjam').textContent = r.durasi_menit? rp(d.gmvjam):'—';
@@ -652,8 +680,9 @@ async function submitPerforma(){
   const payload={
     host:me.name, brand:me.brand, host_email:ME,
     tanggal:v('f_tanggal'), sesi:+v('f_sesi'),
+    platform:v('f_platform')||'tiktok',
     gmv:n('f_gmv'), pembeli:n('f_pembeli'), items:n('f_items'),
-    viewers:n('f_viewers'), impresi:n('f_impresi'), klik_produk:n('f_klik'),
+    viewers:n('f_viewers'), impresi:n('f_impresi'), klik_produk:n('f_klik'), atc:n('f_atc'),
     avg_view_dur:n('f_avg'), durasi_menit:n('f_durasi_jam')*60+n('f_durasi_min'),
     followers_baru:n('f_foll'), likes:n('f_likes'), komentar:n('f_kom'),
     screenshot_url,
@@ -661,7 +690,7 @@ async function submitPerforma(){
   const {error}=await sb.from('live_performance').insert([payload]);
   if(error){showToast('Gagal: '+error.message,'error');return;}
   showToast('Data sesi tersimpan!','success');
-  ['f_gmv','f_pembeli','f_items','f_viewers','f_impresi','f_klik','f_avg','f_durasi_jam','f_durasi_min','f_foll','f_likes','f_kom'].forEach(id=>document.getElementById(id).value='');
+  ['f_gmv','f_pembeli','f_items','f_viewers','f_impresi','f_klik','f_atc','f_avg','f_durasi_jam','f_durasi_min','f_foll','f_likes','f_kom'].forEach(id=>document.getElementById(id).value='');
   resetSSInput('f_ss_file','f_ss_prompt','f_ss_preview');
   updateCalc();
   loadHostData();
@@ -1176,13 +1205,15 @@ function openEditSesi(id){
   if(!r){ showToast('Data sesi tidak ditemukan.','error'); return; }
   _editId=id;
   const set=(i,v)=>{ const el=document.getElementById(i); if(el) el.value=(v==null?'':v); };
+  document.getElementById('e_platform').value = platOf(r);
   set('e_tanggal', r.tanggal||'');
   document.getElementById('e_sesi').value=String(r.sesi||1);
   set('e_gmv',r.gmv); set('e_pembeli',r.pembeli); set('e_items',r.items);
   const m=+r.durasi_menit||0;
   set('e_durasi_jam', m?Math.floor(m/60):''); set('e_durasi_min', m? m%60 : '');
-  set('e_viewers',r.viewers); set('e_impresi',r.impresi); set('e_klik',r.klik_produk);
+  set('e_viewers',r.viewers); set('e_impresi',r.impresi); set('e_klik',r.klik_produk); set('e_atc',r.atc);
   set('e_avg',r.avg_view_dur); set('e_foll',r.followers_baru); set('e_likes',r.likes); set('e_kom',r.komentar);
+  applyEditPlatform();
   // screenshot
   _editSSUrl = r.screenshot_url || null;
   resetSSInput('e_ss_file','e_ss_prompt','e_ss_preview');
@@ -1197,6 +1228,12 @@ function openEditSesi(id){
 let _editSSUrl=null, _editSSRemove=false;
 function markSSRemove(btn){ _editSSRemove=true; document.getElementById('e_ss_current').innerHTML='<span class="hint" style="color:var(--bad)">Screenshot akan dihapus saat disimpan.</span>'; }
 function closeEditModal(){ document.getElementById('editModal').classList.remove('open'); _editId=null; }
+function applyEditPlatform(){
+  const isS=(document.getElementById('e_platform')?.value)==='shopee';
+  const setDisp=(id,show)=>{const el=document.getElementById(id); if(el) el.style.display=show?'':'none';};
+  setDisp('fg_e_impresi',!isS);
+  setDisp('fg_e_atc',isS);
+}
 
 async function saveEditSesi(){
   if(_editId==null) return;
@@ -1211,8 +1248,9 @@ async function saveEditSesi(){
   }
   const payload={
     tanggal:v('e_tanggal'), sesi:+v('e_sesi'),
+    platform:v('e_platform')||'tiktok',
     gmv:n('e_gmv'), pembeli:n('e_pembeli'), items:n('e_items'),
-    viewers:n('e_viewers'), impresi:n('e_impresi'), klik_produk:n('e_klik'),
+    viewers:n('e_viewers'), impresi:n('e_impresi'), klik_produk:n('e_klik'), atc:n('e_atc'),
     avg_view_dur:n('e_avg'), durasi_menit:n('e_durasi_jam')*60+n('e_durasi_min'),
     followers_baru:n('e_foll'), likes:n('e_likes'), komentar:n('e_kom'),
     screenshot_url,
