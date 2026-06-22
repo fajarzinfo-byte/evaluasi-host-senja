@@ -740,17 +740,19 @@ async function submitPerforma(){
 }
 
 // Shared performance view with month filter (host's own, or leader drilldown)
-function renderPerformanceView(box, allData, label, ctx){
+function renderPerformanceView(box, allData, label, ctx, initMonth){
   ctx = ctx || ('pv_'+Math.random().toString(36).slice(2,8));
   // collect months present
   const months=[...new Set(allData.filter(r=>r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort().reverse();
-  const monthOpts=`<option value="">Semua bulan</option>`+months.map(m=>{const[y,mo]=m.split('-');return `<option value="${m}">${new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`}).join('');
+  // bulan awal diwarisi dari dashboard (kalau host ini punya data di bulan itu)
+  const effMonth=(initMonth && months.includes(initMonth))? initMonth : '';
+  const monthOpts=`<option value="" ${effMonth===''?'selected':''}>Semua bulan</option>`+months.map(m=>{const[y,mo]=m.split('-');return `<option value="${m}" ${m===effMonth?'selected':''}>${new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`}).join('');
   box.innerHTML = `${platToggle()}<div class="filter-row"><label style="font-size:13px;color:var(--text2)">Periode:</label>
     <select id="mf_${ctx}">${monthOpts}</select></div><div id="body_${ctx}"></div>`;
   // stash data on the select for re-render
   const sel=document.getElementById('mf_'+ctx);
-  sel.onchange=()=>renderPerfBody(ctx, allData, label, sel.value);
-  renderPerfBody(ctx, allData, label, '');
+  sel.onchange=()=>{ if(ctx==='drill') DASH_MONTH=sel.value; renderPerfBody(ctx, allData, label, sel.value); };
+  renderPerfBody(ctx, allData, label, effMonth);
 }
 
 function renderPerfBody(ctx, allData, label, month){
@@ -955,13 +957,15 @@ function goLeaderTab(panelId, tabIdx){
   document.getElementById(panelId).classList.add('active');
 }
 
+// filter dashboard yang persist (biar nggak ke-reset saat drilldown / balik)
+let DASH_BRAND='', DASH_MONTH='';
 function renderDash(){
   window._drillEmail=null;
   const box=document.getElementById('dashContent');
   // build month options
   const months=[...new Set(allPerf.filter(r=>r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort().reverse();
-  const curMonth=document.getElementById('mFilter')?.value || '';
-  const curBrand=document.getElementById('bFilter')?.value || '';
+  const curMonth=DASH_MONTH;
+  const curBrand=DASH_BRAND;
 
   const monthOpts=`<option value="">Semua bulan</option>`+months.map(m=>{const[y,mo]=m.split('-');return `<option value="${m}" ${m===curMonth?'selected':''}>${new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`}).join('');
 
@@ -973,12 +977,12 @@ function renderDash(){
   box.innerHTML=`
     ${platToggle()}
     <div class="filter-row">
-      <select id="bFilter" onchange="renderDash()"><option value="">Semua brand</option>
+      <select id="bFilter" onchange="DASH_BRAND=this.value; renderDash()"><option value="">Semua brand</option>
         <option value="Onebear" ${curBrand==='Onebear'?'selected':''}>Onebear</option>
         <option value="Supoe" ${curBrand==='Supoe'?'selected':''}>Supoe</option>
         <option value="Momso" ${curBrand==='Momso'?'selected':''}>Momso</option>
       </select>
-      <select id="mFilter" onchange="renderDash()">${monthOpts}</select>
+      <select id="mFilter" onchange="DASH_MONTH=this.value; renderDash()">${monthOpts}</select>
     </div>
     <div class="stats">
       <div class="stat"><div class="stat-l">Total GMV</div><div class="stat-v good">${rp(tot.gmv)}</div></div>
@@ -1280,7 +1284,7 @@ function drilldown(email,name){
   const hd=allPerf.filter(r=>r.host_email===email).sort((a,b)=>(a.tanggal+a.sesi).localeCompare(b.tanggal+b.sesi));
   box.innerHTML=`<button class="btn-ghost" style="margin-bottom:14px" onclick="renderDash()">← Kembali ke dashboard</button>
     <div class="section-title">Detail Performa — ${name}</div><div id="ddView"></div>`;
-  renderPerformanceView(document.getElementById('ddView'), hd, name, 'drill');
+  renderPerformanceView(document.getElementById('ddView'), hd, name, 'drill', DASH_MONTH);
 }
 
 // ── Edit / Hapus Sesi ──
