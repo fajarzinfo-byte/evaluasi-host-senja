@@ -443,9 +443,26 @@ function buildHost(){
   loadHostData();
 }
 
+// Ambil SEMUA baris live_performance (Supabase batasi 1000/request → paginasi sampai habis)
+async function fetchAllPerf(filterFn){
+  const PAGE=1000; let from=0, all=[];
+  for(;;){
+    let q=sb.from('live_performance').select('*');
+    if(filterFn) q=filterFn(q);
+    q=q.order('tanggal',{ascending:true}).order('sesi',{ascending:true}).range(from, from+PAGE-1);
+    const {data,error}=await q;
+    if(error) return {data: from===0? null : all, error};
+    if(!data||!data.length) break;
+    all=all.concat(data);
+    if(data.length<PAGE) break;     // halaman terakhir
+    from+=PAGE;
+  }
+  return {data:all, error:null};
+}
+
 let myData = [];
 async function loadHostData(){
-  const {data,error}=await sb.from('live_performance').select('*').eq('host_email',ME).order('tanggal',{ascending:true}).order('sesi',{ascending:true});
+  const {data,error}=await fetchAllPerf(q=>q.eq('host_email',ME));
   myData = (error||!data)? [] : data;
   renderHome();
   renderMine();
@@ -855,7 +872,7 @@ function buildLeader(){
 }
 
 async function loadDash(){
-  const {data,error}=await sb.from('live_performance').select('*').order('tanggal',{ascending:true});
+  const {data,error}=await fetchAllPerf();
   if(error){document.getElementById('dashContent').innerHTML='<p class="empty">Gagal memuat.</p>';return;}
   allPerf=data||[];
   renderDash();
@@ -1349,7 +1366,7 @@ async function afterPerfChange(){
     await loadHostData();
     goTab('p-mine',2);
   } else {
-    const {data}=await sb.from('live_performance').select('*').order('tanggal',{ascending:true});
+    const {data}=await fetchAllPerf();
     allPerf=data||[];
     if(window._drillEmail){ drilldown(window._drillEmail, window._drillName); }
     else { renderDash(); }
