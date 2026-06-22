@@ -126,6 +126,10 @@
   .btn-accent:disabled { opacity:.5; cursor:not-allowed; }
   .filter-row { display:flex; gap:10px; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
   .filter-row select { padding:7px 10px; border:1px solid var(--border2); border-radius:var(--rs); font-size:13px; font-family:'Plus Jakarta Sans', sans-serif; color:var(--text); background:var(--surface); outline:none; }
+  .plat-toggle { display:inline-flex; gap:4px; padding:4px; background:var(--surface); border:1px solid var(--border2); border-radius:999px; margin-bottom:1rem; }
+  .pt-btn { padding:6px 16px; border:none; background:transparent; color:var(--text2); font-size:13px; font-weight:600; font-family:'Plus Jakarta Sans',sans-serif; border-radius:999px; cursor:pointer; transition:all .15s; }
+  .pt-btn:hover { color:var(--text); }
+  .pt-btn.active { background:linear-gradient(135deg,#7c4dd6,#b4451a); color:#fff; }
   .section-title { font-size:15px; font-weight:600; margin-bottom:1rem; }
 
   @media (max-width:600px){
@@ -329,7 +333,7 @@ const HOST_MAP = {
 // brand -> hosts split by sesi (pagi=1&2, sore=3&4). Default; bisa diubah di Import.
 const BRAND_HOSTS = {
   'Onebear': { pagi:{name:'Sinta', email:'cintaafandi@gmail.com'}, sore:{name:'Indah', email:'sitifaridah332@gmail.com'} },
-  'Supoe':   { pagi:{name:'Salma', email:'salamahsalma0712@gmail.com'}, sore:{name:'Nadya', email:'iklilunnadia12@gmail.com'} },
+  'Supoe':   { pagi:{name:'Nadya', email:'iklilunnadia12@gmail.com'}, sore:{name:'Salma', email:'salamahsalma0712@gmail.com'} },
   'Momso':   { pagi:{name:'Yaya', email:'tiasetiawati30082006@gmail.com'}, sore:{name:'Fira', email:'syafirasiti143@gmail.com'} },
 };
 const ALL_HOSTS = Object.entries(HOST_MAP).map(([email,v])=>({email, ...v,
@@ -359,6 +363,27 @@ function derive(r){
 }
 // platform helper: data lama tanpa kolom platform dianggap 'tiktok'
 const platOf = r => (r && r.platform) || 'tiktok';
+
+// ── Platform view (TikTok / Shopee / Gabungan) ──
+let PLAT_VIEW='all';   // 'tiktok' | 'shopee' | 'all'
+const PLAT_LABEL={tiktok:'TikTok', shopee:'Shopee', all:'Gabungan'};
+function platFilter(data){ return PLAT_VIEW==='all'? data : (data||[]).filter(r=>platOf(r)===PLAT_VIEW); }
+function platToggle(){
+  const opt=(v,lbl)=>`<button class="pt-btn ${PLAT_VIEW===v?'active':''}" onclick="setPlatView('${v}')">${lbl}</button>`;
+  return `<div class="plat-toggle">${opt('tiktok','TikTok')}${opt('shopee','Shopee')}${opt('all','Gabungan')}</div>`;
+}
+function setPlatView(p){
+  if(p===PLAT_VIEW) return;
+  PLAT_VIEW=p;
+  // re-render whatever surfaces are currently in the DOM (kept in sync)
+  if(document.getElementById('leaderHome'))   renderLeaderHome();
+  if(document.getElementById('dashContent') && !window._drillEmail) renderDash();
+  if(window._drillEmail && document.getElementById('ddView')) drilldown(window._drillEmail, window._drillName);
+  if(document.getElementById('compareContent')) renderCompare();
+  if(document.getElementById('trendContent'))  renderTrend();
+  if(document.getElementById('homeContent'))   renderHome();
+  if(document.getElementById('mineContent'))   renderMine();
+}
 
 // ── Login ──
 async function doLogin(){
@@ -432,15 +457,16 @@ function renderHome(){
   const now = new Date();
   const curMonth = now.toISOString().slice(0,7);
   const monthName = now.toLocaleDateString('id-ID',{month:'long',year:'numeric'});
-  const md = myData.filter(r=>r.tanggal && r.tanggal.startsWith(curMonth));
+  const md = platFilter(myData.filter(r=>r.tanggal && r.tanggal.startsWith(curMonth)));
   const tot = md.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.viewers+=+r.viewers||0;return a;},{gmv:0,pembeli:0,viewers:0});
   const closing = md.filter(r=>(+r.gmv||0)>0).length;
   // last filled date
   const lastDate = myData.length? myData[myData.length-1].tanggal : null;
 
   box.innerHTML = `
+    ${platToggle()}
     <div class="hero" style="background:linear-gradient(135deg,#241f47 0%,#5b2da0 50%,#b4451a 100%);border-radius:16px;padding:26px;color:#fff;margin-bottom:1.3rem;box-shadow:0 8px 30px rgba(30,27,58,.25);position:relative;overflow:hidden">
-      <div style="font-size:12px;color:rgba(255,255,255,.72);text-transform:uppercase;letter-spacing:.05em">GMV Bulan Ini — ${monthName}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.72);text-transform:uppercase;letter-spacing:.05em">GMV Bulan Ini — ${monthName} · ${PLAT_LABEL[PLAT_VIEW]}</div>
       <div class="hero-num" style="font-size:34px;font-weight:600;letter-spacing:-.02em;margin:6px 0">${rp(tot.gmv)}</div>
       <div style="display:flex;gap:20px;font-size:13px;color:rgba(255,255,255,.82);flex-wrap:wrap">
         <span>${md.length} sesi live</span><span>${closing} sesi closing</span><span>${tot.pembeli} pembeli</span><span>${tot.viewers.toLocaleString('id-ID')} viewers</span>
@@ -702,7 +728,7 @@ function renderPerformanceView(box, allData, label, ctx){
   // collect months present
   const months=[...new Set(allData.filter(r=>r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort().reverse();
   const monthOpts=`<option value="">Semua bulan</option>`+months.map(m=>{const[y,mo]=m.split('-');return `<option value="${m}">${new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`}).join('');
-  box.innerHTML = `<div class="filter-row"><label style="font-size:13px;color:var(--text2)">Periode:</label>
+  box.innerHTML = `${platToggle()}<div class="filter-row"><label style="font-size:13px;color:var(--text2)">Periode:</label>
     <select id="mf_${ctx}">${monthOpts}</select></div><div id="body_${ctx}"></div>`;
   // stash data on the select for re-render
   const sel=document.getElementById('mf_'+ctx);
@@ -711,15 +737,40 @@ function renderPerformanceView(box, allData, label, ctx){
 }
 
 function renderPerfBody(ctx, allData, label, month){
-  const data = month? allData.filter(r=>r.tanggal&&r.tanggal.startsWith(month)) : allData;
+  const data = platFilter(month? allData.filter(r=>r.tanggal&&r.tanggal.startsWith(month)) : allData);
   const box=document.getElementById('body_'+ctx);
-  if(!data.length){ box.innerHTML='<p class="empty">Tidak ada data di bulan ini.</p>'; return; }
-  const tot = data.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.items+=+r.items||0;a.viewers+=+r.viewers||0;a.impresi+=+r.impresi||0;a.klik+=+r.klik_produk||0;a.likes+=+r.likes||0;a.kom+=+r.komentar||0;a.foll+=+r.followers_baru||0;return a;},{gmv:0,pembeli:0,items:0,viewers:0,impresi:0,klik:0,likes:0,kom:0,foll:0});
+  if(!data.length){ box.innerHTML='<p class="empty">Tidak ada data di periode / platform ini.</p>'; return; }
+  const tot = data.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.items+=+r.items||0;a.viewers+=+r.viewers||0;a.impresi+=+r.impresi||0;a.klik+=+r.klik_produk||0;a.atc+=+r.atc||0;a.likes+=+r.likes||0;a.kom+=+r.komentar||0;a.foll+=+r.followers_baru||0;return a;},{gmv:0,pembeli:0,items:0,viewers:0,impresi:0,klik:0,atc:0,likes:0,kom:0,foll:0});
   const dTot = derive({gmv:tot.gmv,pembeli:tot.pembeli,impresi:tot.impresi,klik_produk:tot.klik,viewers:tot.viewers,likes:tot.likes,komentar:tot.kom,durasi_menit:0});
   const closing = data.filter(r=>(+r.gmv||0)>0).length;
   const totVwDur = data.reduce((a,r)=>a+((+r.avg_view_dur||0)*(+r.viewers||0)),0);
   const avgDur = tot.viewers? totVwDur/tot.viewers : 0;
   const N = n => (n||0).toLocaleString('id-ID');
+  const isS = PLAT_VIEW==='shopee', isAll = PLAT_VIEW==='all';
+  // Traffic: TikTok pakai Impresi; Shopee pakai ATC; Gabungan tampilkan dua-duanya ringkas
+  const trafficThird = isS
+    ? `<div class="stat"><div class="stat-l">ATC</div><div class="stat-v">${N(tot.atc)}</div></div>`
+    : `<div class="stat"><div class="stat-l">Impresi</div><div class="stat-v">${N(tot.impresi)}</div></div>`;
+  // Konversi per platform
+  const convCells = isAll
+    ? `<div class="stat"><div class="stat-l">AOV</div><div class="stat-v">${rp(dTot.aov)}</div></div>
+       <div class="stat"><div class="stat-l">Engagement</div><div class="stat-v">${pct(dTot.eng)}</div></div>
+       <div class="stat" style="visibility:hidden"></div><div class="stat" style="visibility:hidden"></div>`
+    : isS
+    ? `<div class="stat"><div class="stat-l">AOV</div><div class="stat-v">${rp(dTot.aov)}</div></div>
+       <div class="stat"><div class="stat-l">Klik/Viewer</div><div class="stat-v">${tot.klik?pct(dTot.klik_per_viewer):'—'}</div></div>
+       <div class="stat"><div class="stat-l">CTOR</div><div class="stat-v">${tot.klik?pct(dTot.ctor):'—'}</div></div>
+       <div class="stat"><div class="stat-l">Engagement</div><div class="stat-v">${pct(dTot.eng)}</div></div>`
+    : `<div class="stat"><div class="stat-l">AOV</div><div class="stat-v">${rp(dTot.aov)}</div></div>
+       <div class="stat"><div class="stat-l">CTR LIVE</div><div class="stat-v">${pct(dTot.ctr)}</div></div>
+       <div class="stat"><div class="stat-l">CTOR</div><div class="stat-v">${pct(dTot.ctor)}</div></div>
+       <div class="stat"><div class="stat-l">GPM</div><div class="stat-v">${rp(dTot.gpm)}</div></div>`;
+  const convSecond = isAll||isS
+    ? ``
+    : `<div class="stats" style="margin-bottom:1.3rem">
+        <div class="stat"><div class="stat-l">Engagement</div><div class="stat-v">${pct(dTot.eng)}</div></div>
+        <div class="stat" style="visibility:hidden"></div><div class="stat" style="visibility:hidden"></div><div class="stat" style="visibility:hidden"></div>
+      </div>`;
 
   box.innerHTML = `
     <div class="grp-head">Revenue</div>
@@ -732,7 +783,7 @@ function renderPerfBody(ctx, allData, label, month){
     <div class="grp-head">Traffic</div>
     <div class="stats">
       <div class="stat"><div class="stat-l">Viewers</div><div class="stat-v">${N(tot.viewers)}</div></div>
-      <div class="stat"><div class="stat-l">Impresi</div><div class="stat-v">${N(tot.impresi)}</div></div>
+      ${trafficThird}
       <div class="stat"><div class="stat-l">Klik Produk</div><div class="stat-v">${N(tot.klik)}</div></div>
       <div class="stat"><div class="stat-l">Avg View Dur</div><div class="stat-v">${avgDur.toFixed(1)}<span style="font-size:12px;color:var(--text3)"> dtk</span></div></div>
     </div>
@@ -743,30 +794,25 @@ function renderPerfBody(ctx, allData, label, month){
       <div class="stat"><div class="stat-l">Komentar</div><div class="stat-v">${N(tot.kom)}</div></div>
       <div class="stat"><div class="stat-l">Items / Sesi</div><div class="stat-v">${data.length?(tot.items/data.length).toFixed(1):'0'}</div></div>
     </div>
-    <div class="grp-head">Metrik Konversi (dihitung otomatis)</div>
+    <div class="grp-head">Metrik Konversi (dihitung otomatis) · ${PLAT_LABEL[PLAT_VIEW]}</div>
     <div class="stats">
-      <div class="stat"><div class="stat-l">AOV</div><div class="stat-v">${rp(dTot.aov)}</div></div>
-      <div class="stat"><div class="stat-l">CTR LIVE</div><div class="stat-v">${pct(dTot.ctr)}</div></div>
-      <div class="stat"><div class="stat-l">CTOR</div><div class="stat-v">${pct(dTot.ctor)}</div></div>
-      <div class="stat"><div class="stat-l">GPM</div><div class="stat-v">${rp(dTot.gpm)}</div></div>
+      ${convCells}
     </div>
-    <div class="stats" style="margin-bottom:1.3rem">
-      <div class="stat"><div class="stat-l">Engagement</div><div class="stat-v">${pct(dTot.eng)}</div></div>
-      <div class="stat" style="visibility:hidden"></div><div class="stat" style="visibility:hidden"></div><div class="stat" style="visibility:hidden"></div>
-    </div>
+    ${convSecond}
     <div class="chart-card"><h3>Tren GMV per sesi (urut waktu)</h3><div class="chart-wrap"><canvas id="chGmv_${ctx}"></canvas></div></div>
     <div class="chart-card"><h3>GMV per sesi (rata-rata sesi 1–4)</h3><div class="chart-wrap sm"><canvas id="chSesi_${ctx}"></canvas></div></div>
     <div class="section-title">Riwayat Sesi</div>
     <div class="tbl-wrap"><div class="tbl-scroll"><table>
-      <thead><tr><th>Aksi</th><th>Tgl</th><th>Sesi</th><th class="num">GMV</th><th class="num">Pembeli</th><th class="num">Items</th><th class="num">Viewers</th><th class="num">Impresi</th><th class="num">Klik</th><th class="num">AvgDur</th><th class="num">Follow</th><th class="num">Likes</th><th class="num">Komen</th><th class="num">CTR</th><th class="num">CTOR</th><th class="num">GPM</th><th class="num">Eng</th><th class="num">SS</th></tr></thead>
-      <tbody>${[...data].reverse().map(r=>{const d=derive(r);return `<tr>
+      <thead><tr><th>Aksi</th><th>Tgl</th><th>Sesi</th><th>Plat</th><th class="num">GMV</th><th class="num">Pembeli</th><th class="num">Items</th><th class="num">Viewers</th><th class="num">Impresi</th><th class="num">Klik</th><th class="num">AvgDur</th><th class="num">Follow</th><th class="num">Likes</th><th class="num">Komen</th><th class="num">CTR</th><th class="num">CTOR</th><th class="num">GPM</th><th class="num">Eng</th><th class="num">SS</th></tr></thead>
+      <tbody>${[...data].reverse().map(r=>{const d=derive(r);const sh=platOf(r)==='shopee';return `<tr>
         <td style="white-space:nowrap"><button class="row-btn" onclick="openEditSesi('${r.id}')" title="Edit sesi">✏️</button>${ROLE==='leader'?`<button class="row-btn del" onclick="deleteSesi('${r.id}')" title="Hapus sesi">🗑️</button>`:''}</td>
         <td>${fmtTgl(r.tanggal)}</td><td>S${r.sesi}</td>
+        <td title="${sh?'Shopee':'TikTok'}">${sh?'🛒':'🎵'}</td>
         <td class="num">${rp(+r.gmv||0)}</td><td class="num">${r.pembeli||0}</td><td class="num">${r.items||0}</td>
-        <td class="num">${(r.viewers||0).toLocaleString('id-ID')}</td><td class="num">${(r.impresi||0).toLocaleString('id-ID')}</td><td class="num">${r.klik_produk||0}</td>
+        <td class="num">${(r.viewers||0).toLocaleString('id-ID')}</td><td class="num">${sh?'—':(r.impresi||0).toLocaleString('id-ID')}</td><td class="num">${r.klik_produk||0}</td>
         <td class="num">${(+r.avg_view_dur||0).toFixed(0)}</td><td class="num">${r.followers_baru||0}</td><td class="num">${(r.likes||0).toLocaleString('id-ID')}</td><td class="num">${r.komentar||0}</td>
-        <td class="num">${r.impresi?pct(d.ctr):'—'}</td><td class="num">${r.klik_produk?pct(d.ctor):'—'}</td>
-        <td class="num">${r.impresi?rp(d.gpm):'—'}</td><td class="num">${r.viewers?pct(d.eng):'—'}</td>
+        <td class="num">${sh?(r.viewers&&r.klik_produk?pct(d.klik_per_viewer):'—'):(r.impresi?pct(d.ctr):'—')}</td><td class="num">${r.klik_produk?pct(d.ctor):'—'}</td>
+        <td class="num">${sh?'—':(r.impresi?rp(d.gpm):'—')}</td><td class="num">${r.viewers?pct(d.eng):'—'}</td>
         <td class="num">${r.screenshot_url?`<button class="row-btn" onclick="viewScreenshot('${r.screenshot_url}')" title="Lihat screenshot">📷</button>`:'<span style="color:var(--text3)">—</span>'}</td>
       </tr>`}).join('')}</tbody>
     </table></div></div>`;
@@ -823,7 +869,7 @@ function renderLeaderHome(){
   const now=new Date();
   const curMonth=now.toISOString().slice(0,7);
   const monthName=now.toLocaleDateString('id-ID',{month:'long',year:'numeric'});
-  const md=allPerf.filter(r=>r.tanggal&&r.tanggal.startsWith(curMonth));
+  const md=platFilter(allPerf.filter(r=>r.tanggal&&r.tanggal.startsWith(curMonth)));
   const tot=md.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.viewers+=+r.viewers||0;return a;},{gmv:0,pembeli:0,viewers:0});
   const activeHosts=new Set(md.map(r=>r.host_email)).size;
 
@@ -835,8 +881,9 @@ function renderLeaderHome(){
   });
 
   box.innerHTML=`
+    ${platToggle()}
     <div class="hero" style="background:linear-gradient(135deg,#241f47 0%,#5b2da0 50%,#b4451a 100%);border-radius:16px;padding:26px;color:#fff;margin-bottom:1.3rem;box-shadow:0 8px 30px rgba(30,27,58,.25);position:relative;overflow:hidden">
-      <div style="font-size:12px;color:rgba(255,255,255,.72);text-transform:uppercase;letter-spacing:.05em">Total GMV Tim — ${monthName}</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.72);text-transform:uppercase;letter-spacing:.05em">Total GMV Tim — ${monthName} · ${PLAT_LABEL[PLAT_VIEW]}</div>
       <div class="hero-num" style="font-size:34px;font-weight:600;letter-spacing:-.02em;margin:6px 0">${rp(tot.gmv)}</div>
       <div style="display:flex;gap:20px;font-size:13px;color:rgba(255,255,255,.82);flex-wrap:wrap">
         <span>${md.length} sesi live</span><span>${activeHosts} host aktif</span><span>${tot.pembeli} pembeli</span><span>${tot.viewers.toLocaleString('id-ID')} viewers</span>
@@ -901,12 +948,13 @@ function renderDash(){
 
   const monthOpts=`<option value="">Semua bulan</option>`+months.map(m=>{const[y,mo]=m.split('-');return `<option value="${m}" ${m===curMonth?'selected':''}>${new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`}).join('');
 
-  const filtered=allPerf.filter(r=>(!curBrand||r.brand===curBrand)&&(!curMonth||(r.tanggal&&r.tanggal.startsWith(curMonth))));
+  const filtered=platFilter(allPerf.filter(r=>(!curBrand||r.brand===curBrand)&&(!curMonth||(r.tanggal&&r.tanggal.startsWith(curMonth)))));
 
   const tot=filtered.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.impresi+=+r.impresi||0;a.klik+=+r.klik_produk||0;a.viewers+=+r.viewers||0;return a;},{gmv:0,pembeli:0,impresi:0,klik:0,viewers:0});
   const dT=derive({gmv:tot.gmv,pembeli:tot.pembeli,impresi:tot.impresi,klik_produk:tot.klik,viewers:tot.viewers,likes:0,komentar:0,durasi_menit:0});
 
   box.innerHTML=`
+    ${platToggle()}
     <div class="filter-row">
       <select id="bFilter" onchange="renderDash()"><option value="">Semua brand</option>
         <option value="Onebear" ${curBrand==='Onebear'?'selected':''}>Onebear</option>
@@ -936,14 +984,19 @@ function renderDash(){
     const vw=hd.reduce((a,r)=>a+(+r.viewers||0),0);
     const imp=hd.reduce((a,r)=>a+(+r.impresi||0),0);
     const kl=hd.reduce((a,r)=>a+(+r.klik_produk||0),0);
-    const dd=derive({gmv:g,pembeli:p,impresi:imp,klik_produk:kl,viewers:1,likes:0,komentar:0,durasi_menit:0});
+    const dd=derive({gmv:g,pembeli:p,impresi:imp,klik_produk:kl,viewers:vw,likes:0,komentar:0,durasi_menit:0});
+    const funnel = PLAT_VIEW==='shopee'
+      ? `<span>Klik/Vw ${vw&&kl?pct(dd.klik_per_viewer):'—'}</span><span>CTOR ${kl?pct(dd.ctor):'—'}</span>`
+      : PLAT_VIEW==='tiktok'
+      ? `<span>CTR ${imp?pct(dd.ctr):'—'}</span><span>CTOR ${kl?pct(dd.ctor):'—'}</span>`
+      : ``;
     return `<div class="tbl-wrap" style="padding:14px 16px;margin-bottom:8px;cursor:pointer" onclick="drilldown('${h.email}','${h.name}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div><b>${h.name}</b> <span class="badge">${h.brand}</span></div>
         <div style="font-size:18px;font-weight:600;color:var(--good)">${rp(g)}</div>
       </div>
       <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--text2);flex-wrap:wrap">
-        <span>${hd.length} sesi</span><span>${p.toLocaleString('id-ID')} pembeli</span><span>${it.toLocaleString('id-ID')} items</span><span>${vw.toLocaleString('id-ID')} viewers</span><span>AOV ${rp(dd.aov)}</span><span>CTR ${pct(dd.ctr)}</span><span>CTOR ${pct(dd.ctor)}</span>
+        <span>${hd.length} sesi</span><span>${p.toLocaleString('id-ID')} pembeli</span><span>${it.toLocaleString('id-ID')} items</span><span>${vw.toLocaleString('id-ID')} viewers</span><span>AOV ${rp(dd.aov)}</span>${funnel}
       </div>
       <div style="font-size:11px;color:var(--text3);margin-top:6px">Klik untuk lihat detail lengkap →</div>
     </div>`;
@@ -982,7 +1035,7 @@ function renderCompare(){
   const periodLbl = curMonth==='' ? 'Akumulasi semua bulan' : (()=>{const[y,mo]=curMonth.split('-');return new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})})();
 
   const hosts=ALL_HOSTS.filter(h=>h.brand===curBrand);
-  const rowsData=allPerf.filter(r=>r.brand===curBrand && (!curMonth || (r.tanggal&&r.tanggal.startsWith(curMonth))));
+  const rowsData=platFilter(allPerf.filter(r=>r.brand===curBrand && (!curMonth || (r.tanggal&&r.tanggal.startsWith(curMonth)))));
 
   const hd=hosts.map(h=>{
     const hr=rowsData.filter(r=>r.host_email===h.email);
@@ -990,12 +1043,13 @@ function renderCompare(){
     const s=hr.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.items+=+r.items||0;a.vw+=+r.viewers||0;a.imp+=+r.impresi||0;a.kl+=+r.klik_produk||0;a.likes+=+r.likes||0;a.kom+=+r.komentar||0;return a;},{gmv:0,pembeli:0,items:0,vw:0,imp:0,kl:0,likes:0,kom:0});
     const d=derive({gmv:s.gmv,pembeli:s.pembeli,impresi:s.imp,klik_produk:s.kl,viewers:s.vw,likes:s.likes,komentar:s.kom,durasi_menit:0});
     return {h, none:false, sesi:hr.length, gmv:s.gmv, pembeli:s.pembeli, items:s.items, viewers:s.vw,
-            aov:d.aov, ctr:d.ctr, ctor:d.ctor, eng:d.eng};
+            aov:d.aov, ctr:d.ctr, ctor:d.ctor, eng:d.eng, kpv:d.klik_per_viewer};
   });
 
   const withData=hd.filter(x=>!x.none);
 
   let html=`
+    ${platToggle()}
     <div class="filter-row">
       <select id="cmpBrand" onchange="renderCompare()">
         <option value="Onebear" ${curBrand==='Onebear'?'selected':''}>Onebear</option>
@@ -1031,15 +1085,22 @@ function renderCompare(){
 
   const head=`<th>Metrik</th>`+hd.map(x=>`<th class="num">${x.h.name}${x.none?' <span style="font-weight:400;color:var(--text3);font-size:10px">(no data)</span>':''}</th>`).join('');
 
-  const rowsHtml=[
+  const volRows=[
     `<tr><td><b>GMV</b> <span style="font-size:10px;color:var(--text3)">volume · dipengaruhi jam tayang</span></td>${hd.map(x=>vCell(x,'gmv',rp)).join('')}</tr>`,
     `<tr><td>Sesi <span style="font-size:10px;color:var(--text3)">volume</span></td>${hd.map(x=>vCell(x,'sesi',v=>v)).join('')}</tr>`,
     `<tr><td>Pembeli <span style="font-size:10px;color:var(--text3)">volume</span></td>${hd.map(x=>vCell(x,'pembeli',v=>(v||0).toLocaleString('id-ID'))).join('')}</tr>`,
     `<tr style="border-top:2px solid var(--border2)"><td><b>AOV</b> <span style="font-size:10px;color:var(--text3)">kualitas basket</span></td>${hd.map(x=>qCell(x,'aov',rp)).join('')}</tr>`,
+  ];
+  const funnelRows = PLAT_VIEW==='all' ? [] : (PLAT_VIEW==='shopee' ? [
+    `<tr><td><b>Klik/Viewer</b> <span style="font-size:10px;color:var(--text3)">daya tarik (Shopee)</span></td>${hd.map(x=>qCell(x,'kpv',pct)).join('')}</tr>`,
+    `<tr><td><b>CTOR</b> <span style="font-size:10px;color:var(--text3)">closing</span></td>${hd.map(x=>qCell(x,'ctor',pct)).join('')}</tr>`,
+    `<tr><td><b>Engagement</b> <span style="font-size:10px;color:var(--text3)">interaktivitas</span></td>${hd.map(x=>qCell(x,'eng',pct)).join('')}</tr>`,
+  ] : [
     `<tr><td><b>CTR</b> <span style="font-size:10px;color:var(--text3)">daya tarik</span></td>${hd.map(x=>qCell(x,'ctr',pct)).join('')}</tr>`,
     `<tr><td><b>CTOR</b> <span style="font-size:10px;color:var(--text3)">closing</span></td>${hd.map(x=>qCell(x,'ctor',pct)).join('')}</tr>`,
     `<tr><td><b>Engagement</b> <span style="font-size:10px;color:var(--text3)">interaktivitas</span></td>${hd.map(x=>qCell(x,'eng',pct)).join('')}</tr>`,
-  ].join('');
+  ]);
+  const rowsHtml=[...volRows,...funnelRows].join('');
 
   html+=`
     <div class="tbl-wrap"><div class="tbl-scroll"><table>
@@ -1048,15 +1109,17 @@ function renderCompare(){
     </table></div></div>
     <div style="font-size:11px;color:var(--text3);margin-top:8px;line-height:1.5">
       ▲ = nilai terbaik di barisnya. Persentase = selisih relatif terhadap yang tertinggi.<br>
-      Penilaian "siapa lebih jago" pakai metrik kualitas (AOV, CTR, CTOR, Engagement), bukan GMV mentah — karena GMV besar sering cuma efek jam tayang ramai.
+      ${PLAT_VIEW==='all'
+        ? 'Mode Gabungan cuma adu GMV + volume + AOV — metrik funnel (CTR/Klik-Viewer/CTOR) tidak dicampur lintas platform. Pilih TikTok atau Shopee untuk lihat funnel.'
+        : 'Penilaian "siapa lebih jago" pakai metrik kualitas (AOV, '+(PLAT_VIEW==='shopee'?'Klik/Viewer':'CTR')+', CTOR, Engagement), bukan GMV mentah — karena GMV besar sering cuma efek jam tayang ramai.'}
     </div>
-    <div class="chart-card" style="margin-top:1.1rem"><h3>CTOR — kemampuan closing (%)</h3><div class="chart-wrap sm"><canvas id="chCtor"></canvas></div></div>`;
+    ${PLAT_VIEW==='all' ? '' : `<div class="chart-card" style="margin-top:1.1rem"><h3>CTOR — kemampuan closing (%)</h3><div class="chart-wrap sm"><canvas id="chCtor"></canvas></div></div>`}`;
 
   box.innerHTML=html;
 
   if(charts.ctor){try{charts.ctor.destroy()}catch(e){}}
-  const cd=withData.filter(x=>(+x.ctor||0)>0);
-  if(cd.length){
+  const cd=PLAT_VIEW==='all'? [] : withData.filter(x=>(+x.ctor||0)>0);
+  if(cd.length && document.getElementById('chCtor')){
     charts.ctor=new Chart(document.getElementById('chCtor'),{type:'bar',data:{
       labels:cd.map(x=>x.h.name),
       datasets:[{data:cd.map(x=>(+x.ctor||0)*100),backgroundColor:cd.map(x=>x.h.color),borderRadius:5}]
@@ -1076,6 +1139,7 @@ const TREND_METRICS={
   gmv: {label:'GMV',        type:'money', val:s=>s.gmv},
   aov: {label:'AOV',        type:'money', val:s=>s.pembeli? s.gmv/s.pembeli : 0},
   ctr: {label:'CTR',        type:'pct',   val:s=>s.imp? s.kl/s.imp : 0},
+  kpv: {label:'Klik/Viewer',type:'pct',   val:s=>s.vw? s.kl/s.vw : 0},
   ctor:{label:'CTOR',       type:'pct',   val:s=>s.kl? s.pembeli/s.kl : 0},
   eng: {label:'Engagement', type:'pct',   val:s=>s.vw? (s.likes+s.kom)/s.vw : 0},
 };
@@ -1084,12 +1148,17 @@ function renderTrend(){
   const box=document.getElementById('trendContent');
   if(!box) return;
 
-  const metricKey=document.getElementById('trMetric')?.value || 'gmv';
+  // metrik yang valid per platform
+  const metricKeysFor = PLAT_VIEW==='shopee' ? ['gmv','aov','kpv','ctor','eng']
+                      : PLAT_VIEW==='all'    ? ['gmv','aov']
+                      : ['gmv','aov','ctr','ctor','eng'];
+  let metricKey=document.getElementById('trMetric')?.value || 'gmv';
+  if(!metricKeysFor.includes(metricKey)) metricKey='gmv';
   const M=TREND_METRICS[metricKey];
   const fmt = M.type==='money' ? rp : pct;
 
-  // all months across all brands, ascending
-  const months=[...new Set(allPerf.filter(r=>r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort();
+  // all months across all brands (dalam platform view), ascending
+  const months=[...new Set(platFilter(allPerf).filter(r=>r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort();
   const thisMonth=new Date().toISOString().slice(0,7);
   const berjalanIdx=months.indexOf(thisMonth);          // -1 if current month has no data yet
   const labels=months.map(m=>{const[y,mo]=m.split('-');return new Date(y,mo-1).toLocaleDateString('id-ID',{month:'short',year:'2-digit'})});
@@ -1098,7 +1167,7 @@ function renderTrend(){
   // sums per brand per month (optional day cutoff for MTD)
   function brandMonth(brand,m){ return brandPeriod(brand,m,99); }
   function brandPeriod(brand,m,maxDay){
-    const r=allPerf.filter(x=>x.brand===brand && x.tanggal && x.tanggal.startsWith(m) && (+x.tanggal.slice(8,10))<=maxDay);
+    const r=platFilter(allPerf).filter(x=>x.brand===brand && x.tanggal && x.tanggal.startsWith(m) && (+x.tanggal.slice(8,10))<=maxDay);
     if(!r.length) return null;
     return r.reduce((a,x)=>{a.gmv+=+x.gmv||0;a.pembeli+=+x.pembeli||0;a.vw+=+x.viewers||0;a.imp+=+x.impresi||0;a.kl+=+x.klik_produk||0;a.likes+=+x.likes||0;a.kom+=+x.komentar||0;return a;},{gmv:0,pembeli:0,vw:0,imp:0,kl:0,likes:0,kom:0});
   }
@@ -1136,12 +1205,13 @@ function renderTrend(){
   });
 
   let html=`
+    ${platToggle()}
     <div class="filter-row">
       <select id="trMetric" onchange="renderTrend()">
-        ${Object.entries(TREND_METRICS).map(([k,v])=>`<option value="${k}" ${k===metricKey?'selected':''}>${v.label}</option>`).join('')}
+        ${metricKeysFor.map(k=>`<option value="${k}" ${k===metricKey?'selected':''}>${TREND_METRICS[k].label}</option>`).join('')}
       </select>
     </div>
-    <div class="section-title">Tren ${M.label} per Brand</div>`;
+    <div class="section-title">Tren ${M.label} per Brand · ${PLAT_LABEL[PLAT_VIEW]}</div>`;
 
   if(months.length<2){
     box.innerHTML=html+`<p class="empty">Butuh minimal 2 bulan data untuk lihat tren.</p>`;
