@@ -319,6 +319,7 @@
 const SUPABASE_URL  = 'https://pwqozfqqaewjpnpkydpo.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_1VeUHXivMJkjqKGnAP4_vw_tr614ZcW';
 const LEADER_EMAIL  = 'fajarzinfo@gmail.com';
+const VIEWER_EMAILS = ['niathian@gmail.com'];   // HRD — read-only, lihat Performa saja
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // host email -> {name, brand}
@@ -410,6 +411,7 @@ async function init(){
 function initApp(email){
   ME = email;
   if(email===LEADER_EMAIL){ ROLE='leader'; }
+  else if(VIEWER_EMAILS.includes(email)){ ROLE='viewer'; }
   else if(HOST_MAP[email]){ ROLE='host'; }
   else { alert('Akun tidak dikenali.'); sb.auth.signOut(); return; }
 
@@ -418,7 +420,7 @@ function initApp(email){
   document.getElementById('topActions').innerHTML =
     `<button class="btn-ghost" onclick="sb.auth.signOut().then(()=>location.reload())">Keluar</button>`;
 
-  if(ROLE==='leader') buildLeader();
+  if(ROLE==='leader'||ROLE==='viewer') buildLeader();
   else buildHost();
 }
 
@@ -824,7 +826,7 @@ function renderPerfBody(ctx, allData, label, month){
     <div class="tbl-wrap"><div class="tbl-scroll"><table>
       <thead><tr><th>Aksi</th><th>Tgl</th><th>Sesi</th><th>Plat</th><th class="num">GMV</th><th class="num">Pembeli</th><th class="num">Items</th><th class="num">Viewers</th><th class="num">Impresi</th><th class="num">Klik</th><th class="num">AvgDur</th><th class="num">Follow</th><th class="num">Likes</th><th class="num">Komen</th><th class="num">CTR</th><th class="num">CTOR</th><th class="num">GPM</th><th class="num">Eng</th><th class="num">SS</th></tr></thead>
       <tbody>${[...data].reverse().map(r=>{const d=derive(r);const sh=platOf(r)==='shopee';return `<tr>
-        <td style="white-space:nowrap"><button class="row-btn" onclick="openEditSesi('${r.id}')" title="Edit sesi">✏️</button>${ROLE==='leader'?`<button class="row-btn del" onclick="deleteSesi('${r.id}')" title="Hapus sesi">🗑️</button>`:''}</td>
+        <td style="white-space:nowrap">${ROLE!=='viewer'?`<button class="row-btn" onclick="openEditSesi('${r.id}')" title="Edit sesi">✏️</button>`:''}${ROLE==='leader'?`<button class="row-btn del" onclick="deleteSesi('${r.id}')" title="Hapus sesi">🗑️</button>`:''}</td>
         <td>${fmtTgl(r.tanggal)}</td><td>S${r.sesi}</td>
         <td title="${sh?'Shopee':'TikTok'}">${sh?'🛒':'🎵'}</td>
         <td class="num">${rp(+r.gmv||0)}</td><td class="num">${r.pembeli||0}</td><td class="num">${r.items||0}</td>
@@ -855,21 +857,22 @@ function renderPerfBody(ctx, allData, label, month){
 // ════════════════════════════════════
 let allPerf = [];
 function buildLeader(){
-  document.getElementById('greeting').textContent = 'Panel Leader';
-  document.getElementById('subtitle').textContent = 'Evaluasi & performa semua host';
+  const isViewer = ROLE==='viewer';
+  document.getElementById('greeting').textContent = isViewer ? 'Panel HRD' : 'Panel Leader';
+  document.getElementById('subtitle').textContent = isViewer ? 'Lihat performa semua host (read-only)' : 'Evaluasi & performa semua host';
   document.getElementById('tabs').innerHTML =
     `<div class="tab active" onclick="switchTab(this,'l-home')">Beranda</div>`+
     `<div class="tab" onclick="switchTab(this,'l-dash')">Dashboard Performa</div>`+
     `<div class="tab" onclick="switchTab(this,'l-compare')">Banding</div>`+
     `<div class="tab" onclick="switchTab(this,'l-trend')">Tren</div>`+
-    `<div class="tab" onclick="switchTab(this,'l-import')">Import Data</div>`;
+    (isViewer ? '' : `<div class="tab" onclick="switchTab(this,'l-import')">Import Data</div>`);
   document.getElementById('panels').innerHTML =
     `<div class="panel active" id="l-home"><div id="leaderHome"><p class="empty">Memuat...</p></div></div>`+
     `<div class="panel" id="l-dash"><div id="dashContent"><p class="empty">Memuat...</p></div></div>`+
     `<div class="panel" id="l-compare"><div id="compareContent"><p class="empty">Memuat...</p></div></div>`+
     `<div class="panel" id="l-trend"><div id="trendContent"><p class="empty">Memuat...</p></div></div>`+
-    `<div class="panel" id="l-import">${importHTML()}</div>`;
-  setupDrop();
+    (isViewer ? '' : `<div class="panel" id="l-import">${importHTML()}</div>`);
+  if(!isViewer) setupDrop();
   loadDash();
 }
 
@@ -917,7 +920,7 @@ function renderLeaderHome(){
 
     <div class="grp-head">Menu</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-      <a class="menu-card" href="https://tinyurl.com/leader-senja" style="text-decoration:none;color:inherit">
+      ${ROLE==='leader' ? `<a class="menu-card" href="https://tinyurl.com/leader-senja" style="text-decoration:none;color:inherit">
         <div class="menu-ic" style="background:rgba(251,191,36,.15);color:#fbbf24">✏️</div>
         <div class="menu-t">Input Evaluasi</div>
         <div class="menu-s">Nilai host (17 poin / 6 kategori)</div>
@@ -926,7 +929,7 @@ function renderLeaderHome(){
         <div class="menu-ic" style="background:rgba(167,139,250,.16);color:#c4b5fd">📋</div>
         <div class="menu-t">Dashboard Evaluasi</div>
         <div class="menu-s">Pantau skor & progress semua host</div>
-      </a>
+      </a>` : ''}
       <div class="menu-card" onclick="goLeaderTab('l-dash',1)">
         <div class="menu-ic" style="background:rgba(74,222,128,.15);color:#4ade80">📊</div>
         <div class="menu-t">Dashboard Performa</div>
@@ -942,11 +945,11 @@ function renderLeaderHome(){
         <div class="menu-t">Tren Brand</div>
         <div class="menu-s">Naik/turun per brand tiap bulan</div>
       </div>
-      <div class="menu-card" onclick="goLeaderTab('l-import',4)">
+      ${ROLE==='leader' ? `<div class="menu-card" onclick="goLeaderTab('l-import',4)">
         <div class="menu-ic" style="background:rgba(167,139,250,.13);color:#a78bfa">📥</div>
         <div class="menu-t">Import Data</div>
         <div class="menu-s">Upload export TikTok per brand</div>
-      </div>
+      </div>` : ''}
     </div>`;
 }
 
