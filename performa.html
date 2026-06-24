@@ -382,6 +382,7 @@ function setPlatView(p){
   if(window._drillEmail && document.getElementById('ddView')) drilldown(window._drillEmail, window._drillName);
   if(document.getElementById('compareContent')) renderCompare();
   if(document.getElementById('trendContent'))  renderTrend();
+  if(document.getElementById('hostTrendContent')) renderHostTrend();
   if(document.getElementById('homeContent'))   renderHome();
   if(document.getElementById('mineContent'))   renderMine();
 }
@@ -865,12 +866,14 @@ function buildLeader(){
     `<div class="tab" onclick="switchTab(this,'l-dash')">Dashboard Performa</div>`+
     `<div class="tab" onclick="switchTab(this,'l-compare')">Banding</div>`+
     `<div class="tab" onclick="switchTab(this,'l-trend')">Tren</div>`+
+    `<div class="tab" onclick="switchTab(this,'l-htrend')">Tren Host</div>`+
     (isViewer ? '' : `<div class="tab" onclick="switchTab(this,'l-import')">Import Data</div>`);
   document.getElementById('panels').innerHTML =
     `<div class="panel active" id="l-home"><div id="leaderHome"><p class="empty">Memuat...</p></div></div>`+
     `<div class="panel" id="l-dash"><div id="dashContent"><p class="empty">Memuat...</p></div></div>`+
     `<div class="panel" id="l-compare"><div id="compareContent"><p class="empty">Memuat...</p></div></div>`+
     `<div class="panel" id="l-trend"><div id="trendContent"><p class="empty">Memuat...</p></div></div>`+
+    `<div class="panel" id="l-htrend"><div id="hostTrendContent"><p class="empty">Memuat...</p></div></div>`+
     (isViewer ? '' : `<div class="panel" id="l-import">${importHTML()}</div>`);
   if(!isViewer) setupDrop();
   loadDash();
@@ -884,6 +887,7 @@ async function loadDash(){
   renderLeaderHome();
   renderCompare();
   renderTrend();
+  renderHostTrend();
 }
 
 function renderLeaderHome(){
@@ -945,7 +949,12 @@ function renderLeaderHome(){
         <div class="menu-t">Tren Brand</div>
         <div class="menu-s">Naik/turun per brand tiap bulan</div>
       </div>
-      ${ROLE==='leader' ? `<div class="menu-card" onclick="goLeaderTab('l-import',4)">
+      <div class="menu-card" onclick="goLeaderTab('l-htrend',4)">
+        <div class="menu-ic" style="background:rgba(232,121,249,.15);color:#e879f9">🧑‍🚀</div>
+        <div class="menu-t">Tren Host</div>
+        <div class="menu-s">Perkembangan tiap host bulan ke bulan</div>
+      </div>
+      ${ROLE==='leader' ? `<div class="menu-card" onclick="goLeaderTab('l-import',5)">
         <div class="menu-ic" style="background:rgba(167,139,250,.13);color:#a78bfa">📥</div>
         <div class="menu-t">Import Data</div>
         <div class="menu-s">Upload export TikTok per brand</div>
@@ -1272,6 +1281,135 @@ function renderTrend(){
       tension:.3, pointRadius:3, spanGaps:true,
       segment:{ borderDash: ctx => (berjalanIdx>=0 && ctx.p1DataIndex===berjalanIdx) ? [6,4] : undefined },
     }))},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#cbd5e1',font:{size:11},usePointStyle:true}},
+        tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y==null?'—':fmt(c.parsed.y)}`}}},
+      scales:{y:{ticks:{color:'#94a3b8',font:{size:10},callback:v=>M.type==='money'?('Rp'+(v/1e6).toFixed(1)+'jt'):((v*100).toFixed(1)+'%')},grid:{color:'rgba(255,255,255,.07)'}},
+        x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{display:false}}}}
+  });
+}
+
+// ════════════════════════════════════
+// TREN HOST (bulan ke bulan, 1 host vs rata-rata brand)
+// ════════════════════════════════════
+function renderHostTrend(){
+  const box=document.getElementById('hostTrendContent');
+  if(!box) return;
+
+  // host terpilih — default ke host pertama yang punya data
+  let curEmail=document.getElementById('htHost')?.value;
+  if(!curEmail || !HOST_MAP[curEmail]){
+    const wd=ALL_HOSTS.find(h=>allPerf.some(r=>r.host_email===h.email));
+    curEmail=(wd||ALL_HOSTS[0]).email;
+  }
+  const host=ALL_HOSTS.find(h=>h.email===curEmail);
+  const brand=host.brand;
+
+  // metrik valid per platform (sama seperti Tren Brand)
+  const metricKeysFor = PLAT_VIEW==='shopee' ? ['gmv','aov','kpv','ctor','eng']
+                      : PLAT_VIEW==='all'    ? ['gmv','aov']
+                      : ['gmv','aov','ctr','ctor','eng'];
+  let metricKey=document.getElementById('htMetric')?.value || 'gmv';
+  if(!metricKeysFor.includes(metricKey)) metricKey='gmv';
+  const M=TREND_METRICS[metricKey];
+  const fmt = M.type==='money' ? rp : pct;
+
+  // semua bulan yang punya data (platform view), ascending
+  const months=[...new Set(platFilter(allPerf).filter(r=>r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort();
+  const thisMonth=new Date().toISOString().slice(0,7);
+  const berjalanIdx=months.indexOf(thisMonth);
+  const labels=months.map(m=>{const[y,mo]=m.split('-');return new Date(y,mo-1).toLocaleDateString('id-ID',{month:'short',year:'2-digit'})});
+  const berjalanLbl = berjalanIdx>=0 ? (()=>{const[y,mo]=thisMonth.split('-');return new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})})() : null;
+
+  // penjumlah baris -> bentuk yang dipakai TREND_METRICS.val()
+  function sumRows(rows){
+    if(!rows.length) return null;
+    return rows.reduce((a,x)=>{a.gmv+=+x.gmv||0;a.pembeli+=+x.pembeli||0;a.vw+=+x.viewers||0;a.imp+=+x.impresi||0;a.kl+=+x.klik_produk||0;a.likes+=+x.likes||0;a.kom+=+x.komentar||0;return a;},{gmv:0,pembeli:0,vw:0,imp:0,kl:0,likes:0,kom:0});
+  }
+  function hostPeriod(m,maxDay){
+    return sumRows(platFilter(allPerf).filter(x=>x.host_email===curEmail && x.tanggal && x.tanggal.startsWith(m) && (+x.tanggal.slice(8,10))<=maxDay));
+  }
+  function brandPeriod(m,maxDay){
+    return sumRows(platFilter(allPerf).filter(x=>x.brand===brand && x.tanggal && x.tanggal.startsWith(m) && (+x.tanggal.slice(8,10))<=maxDay));
+  }
+
+  const hostData =months.map(m=>{const s=hostPeriod(m,99);  if(!s) return null; const v=M.val(s); return (M.type==='pct'&&v<=0)?null:v;});
+  const brandData=months.map(m=>{const s=brandPeriod(m,99); if(!s) return null; const v=M.val(s); return (M.type==='pct'&&v<=0)?null:v;});
+
+  const mlabel=m=>{const[y,mo]=m.split('-');return new Date(y,mo-1).toLocaleDateString('id-ID',{month:'short',year:'2-digit'})};
+
+  // Badge MoM: pacing (periode sama) vs bulan komplit terakhir — logika identik Tren Brand
+  const completed=months.filter(m=>m!==thisMonth);
+  const hasBerjalan=months.includes(thisMonth);
+  let cutoffDay=0;
+  if(hasBerjalan){
+    cutoffDay=Math.max(0,...allPerf.filter(r=>r.tanggal&&r.tanggal.startsWith(thisMonth)).map(r=>+r.tanggal.slice(8,10)));
+  }
+  let cmpM,baseM,winDay,badgeNote;
+  if(hasBerjalan && cutoffDay>0 && completed.length>=1){
+    cmpM=thisMonth; baseM=completed[completed.length-1]; winDay=cutoffDay;
+    badgeNote=`Pacing ${mlabel(baseM)} (1–${winDay}) → ${mlabel(cmpM)} (1–${winDay}) · sama-sama ${winDay} hari pertama`;
+  } else {
+    cmpM=completed[completed.length-1]; baseM=completed[completed.length-2]; winDay=99;
+    badgeNote=baseM?`Perubahan ${mlabel(baseM)} → ${mlabel(cmpM)} (bulan komplit terakhir)`:'';
+  }
+  function changeBadge(periodFn){
+    if(!cmpM||!baseM) return {txt:'butuh 2 bulan', dir:0};
+    const sC=periodFn(cmpM,winDay), sB=periodFn(baseM,winDay);
+    const vC=sC?M.val(sC):null, vB=sB?M.val(sB):null;
+    if(vC==null||vB==null||vB<=0) return {txt:'data kurang', dir:0};
+    const d=Math.round((vC/vB-1)*100);
+    return {txt:(d>=0?'+':'')+d+'%', dir:Math.sign(d)};
+  }
+  const hb=changeBadge(hostPeriod), bb=changeBadge(brandPeriod);
+  const badgeCol=x=>x.dir>0?'var(--good)':(x.dir<0?'#f87171':'var(--text3)');
+  const badgeArr=x=>x.dir>0?'▲':(x.dir<0?'▼':'');
+
+  // dropdown host dikelompokkan per brand
+  const hostOpts=['Onebear','Supoe','Momso'].map(b=>{
+    const opts=ALL_HOSTS.filter(h=>h.brand===b).map(h=>`<option value="${h.email}" ${h.email===curEmail?'selected':''}>${h.name}</option>`).join('');
+    return `<optgroup label="${b}">${opts}</optgroup>`;
+  }).join('');
+
+  let html=`
+    ${platToggle()}
+    <div class="filter-row">
+      <select id="htHost" onchange="renderHostTrend()">${hostOpts}</select>
+      <select id="htMetric" onchange="renderHostTrend()">
+        ${metricKeysFor.map(k=>`<option value="${k}" ${k===metricKey?'selected':''}>${TREND_METRICS[k].label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="section-title">Tren ${M.label} — ${host.name} <span style="color:var(--text3);font-weight:400">· ${brand} · ${PLAT_LABEL[PLAT_VIEW]}</span></div>`;
+
+  if(months.length<2){
+    box.innerHTML=html+`<p class="empty">Butuh minimal 2 bulan data untuk lihat perkembangan host.</p>`;
+    if(charts.htrend){try{charts.htrend.destroy()}catch(e){}}
+    return;
+  }
+
+  html+=`<div style="font-size:11px;color:var(--text3);margin:-4px 0 8px">${badgeNote}</div>
+    <div class="stats" style="margin-bottom:1rem">
+      <div class="stat"><div class="stat-l">${host.name} (MoM)</div><div class="stat-v" style="color:${badgeCol(hb)};font-size:18px">${hb.txt} ${badgeArr(hb)}</div></div>
+      <div class="stat"><div class="stat-l">Rata-rata ${brand} (MoM)</div><div class="stat-v" style="color:${badgeCol(bb)};font-size:18px">${bb.txt} ${badgeArr(bb)}</div></div>
+    </div>
+    <div class="chart-card"><h3>${M.label} bulan ke bulan — ${host.name} vs rata-rata ${brand}</h3><div class="chart-wrap"><canvas id="chHTrend"></canvas></div></div>`;
+
+  if(berjalanLbl){
+    html+=`<div style="font-size:11px;color:#f59e0b;margin-top:8px">⏳ ${berjalanLbl} masih berjalan — titik terakhir (garis putus-putus) belum lengkap, jadi tidak dipakai di perhitungan perubahan %.</div>`;
+  }
+
+  box.innerHTML=html;
+
+  if(charts.htrend){try{charts.htrend.destroy()}catch(e){}}
+  charts.htrend=new Chart(document.getElementById('chHTrend'),{
+    type:'line',
+    data:{labels, datasets:[
+      { label:host.name, data:hostData, borderColor:host.color, backgroundColor:host.color+'22',
+        tension:.3, pointRadius:3, borderWidth:2.5, spanGaps:true,
+        segment:{ borderDash: ctx => (berjalanIdx>=0 && ctx.p1DataIndex===berjalanIdx) ? [6,4] : undefined } },
+      { label:'Rata-rata '+brand, data:brandData, borderColor:'rgba(148,163,184,.55)', backgroundColor:'transparent',
+        tension:.3, pointRadius:0, borderWidth:1.5, spanGaps:true }
+    ]},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{labels:{color:'#cbd5e1',font:{size:11},usePointStyle:true}},
         tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y==null?'—':fmt(c.parsed.y)}`}}},
