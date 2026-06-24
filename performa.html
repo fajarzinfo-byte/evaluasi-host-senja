@@ -346,6 +346,14 @@ let ROLE = null, ME = null, charts = {};
 function showToast(m,t='info'){const e=document.getElementById('toast');e.textContent=m;e.className='toast '+t+' show';clearTimeout(window._tt);window._tt=setTimeout(()=>e.className='toast',3000);}
 function rp(n){ return 'Rp ' + Math.round(n).toLocaleString('id-ID'); }
 function pct(n){ return (n*100).toFixed(2)+'%'; }
+// Badge ▲▼ kecil (semua metrik di sistem ini "makin tinggi makin bagus")
+function deltaSpan(cur, prev){
+  if(prev==null || prev<=0 || cur==null || cur<=0) return '';
+  const d=Math.round((cur/prev-1)*100);
+  const col=d>0?'var(--good)':(d<0?'#f87171':'var(--text3)');
+  const arr=d>0?'▲':(d<0?'▼':'');
+  return ` <span style="font-size:10px;font-weight:700;color:${col}">${(d>0?'+':'')+d}%${arr}</span>`;
+}
 function destroyCharts(){ Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}}); charts={}; }
 
 // Derived metrics
@@ -767,53 +775,73 @@ function renderPerfBody(ctx, allData, label, month){
   const totVwDur = data.reduce((a,r)=>a+((+r.avg_view_dur||0)*(+r.viewers||0)),0);
   const avgDur = tot.viewers? totVwDur/tot.viewers : 0;
   const N = n => (n||0).toLocaleString('id-ID');
+  // ── Pembanding bulan lalu (periode hari yang sama) untuk badge ▲▼ di detail ──
+  let pTot=null, pD=null, pAvgDur=0, dNote='';
+  if(month){
+    const cutoff=Math.max(0,...data.map(r=>+r.tanggal.slice(8,10)));
+    const[yy,mm]=month.split('-').map(Number);
+    const pdt=new Date(yy,mm-2,1);
+    const pm=`${pdt.getFullYear()}-${String(pdt.getMonth()+1).padStart(2,'0')}`;
+    const pdata=platFilter(allData.filter(r=>r.tanggal&&r.tanggal.startsWith(pm)&&(+r.tanggal.slice(8,10))<=cutoff));
+    if(cutoff>0 && pdata.length){
+      pTot=pdata.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.items+=+r.items||0;a.viewers+=+r.viewers||0;a.impresi+=+r.impresi||0;a.klik+=+r.klik_produk||0;a.atc+=+r.atc||0;a.likes+=+r.likes||0;a.kom+=+r.komentar||0;a.foll+=+r.followers_baru||0;return a;},{gmv:0,pembeli:0,items:0,viewers:0,impresi:0,klik:0,atc:0,likes:0,kom:0,foll:0});
+      pTot.sesi=pdata.length;
+      pD=derive({gmv:pTot.gmv,pembeli:pTot.pembeli,impresi:pTot.impresi,klik_produk:pTot.klik,viewers:pTot.viewers,likes:pTot.likes,komentar:pTot.kom,durasi_menit:0});
+      const pVwDur=pdata.reduce((a,r)=>a+((+r.avg_view_dur||0)*(+r.viewers||0)),0);
+      pAvgDur=pTot.viewers? pVwDur/pTot.viewers : 0;
+      const ml=(()=>{const[y,mo]=pm.split('-');return new Date(y,mo-1).toLocaleDateString('id-ID',{month:'short',year:'2-digit'})})();
+      dNote=`▲▼ vs ${ml} · dibandingkan sama-sama ${cutoff} hari pertama`;
+    }
+  }
+  const dl=(c,p)=> pTot? deltaSpan(c, p) : '';   // delta (kosong kalau tak ada bulan pembanding)
   const isS = PLAT_VIEW==='shopee', isAll = PLAT_VIEW==='all';
   // Traffic: TikTok pakai Impresi; Shopee pakai ATC; Gabungan tampilkan dua-duanya ringkas
   const trafficThird = isS
-    ? `<div class="stat"><div class="stat-l">ATC</div><div class="stat-v">${N(tot.atc)}</div></div>`
-    : `<div class="stat"><div class="stat-l">Impresi</div><div class="stat-v">${N(tot.impresi)}</div></div>`;
+    ? `<div class="stat"><div class="stat-l">ATC</div><div class="stat-v">${N(tot.atc)}${dl(tot.atc, pTot?pTot.atc:null)}</div></div>`
+    : `<div class="stat"><div class="stat-l">Impresi</div><div class="stat-v">${N(tot.impresi)}${dl(tot.impresi, pTot?pTot.impresi:null)}</div></div>`;
   // Konversi per platform
   const convCells = isAll
-    ? `<div class="stat"><div class="stat-l">AOV</div><div class="stat-v">${rp(dTot.aov)}</div></div>
-       <div class="stat"><div class="stat-l">Engagement</div><div class="stat-v">${pct(dTot.eng)}</div></div>
+    ? `<div class="stat"><div class="stat-l">AOV</div><div class="stat-v">${rp(dTot.aov)}${dl(dTot.aov, pD?pD.aov:null)}</div></div>
+       <div class="stat"><div class="stat-l">Engagement</div><div class="stat-v">${pct(dTot.eng)}${dl(dTot.eng, pD?pD.eng:null)}</div></div>
        <div class="stat" style="visibility:hidden"></div><div class="stat" style="visibility:hidden"></div>`
     : isS
-    ? `<div class="stat"><div class="stat-l">AOV</div><div class="stat-v">${rp(dTot.aov)}</div></div>
-       <div class="stat"><div class="stat-l">Klik/Viewer</div><div class="stat-v">${tot.klik?pct(dTot.klik_per_viewer):'—'}</div></div>
-       <div class="stat"><div class="stat-l">CTOR</div><div class="stat-v">${tot.klik?pct(dTot.ctor):'—'}</div></div>
-       <div class="stat"><div class="stat-l">Engagement</div><div class="stat-v">${pct(dTot.eng)}</div></div>`
-    : `<div class="stat"><div class="stat-l">AOV</div><div class="stat-v">${rp(dTot.aov)}</div></div>
-       <div class="stat"><div class="stat-l">CTR LIVE</div><div class="stat-v">${pct(dTot.ctr)}</div></div>
-       <div class="stat"><div class="stat-l">CTOR</div><div class="stat-v">${pct(dTot.ctor)}</div></div>
-       <div class="stat"><div class="stat-l">GPM</div><div class="stat-v">${rp(dTot.gpm)}</div></div>`;
+    ? `<div class="stat"><div class="stat-l">AOV</div><div class="stat-v">${rp(dTot.aov)}${dl(dTot.aov, pD?pD.aov:null)}</div></div>
+       <div class="stat"><div class="stat-l">Klik/Viewer</div><div class="stat-v">${tot.klik?pct(dTot.klik_per_viewer):'—'}${tot.klik?dl(dTot.klik_per_viewer, pD?pD.klik_per_viewer:null):''}</div></div>
+       <div class="stat"><div class="stat-l">CTOR</div><div class="stat-v">${tot.klik?pct(dTot.ctor):'—'}${tot.klik?dl(dTot.ctor, pD?pD.ctor:null):''}</div></div>
+       <div class="stat"><div class="stat-l">Engagement</div><div class="stat-v">${pct(dTot.eng)}${dl(dTot.eng, pD?pD.eng:null)}</div></div>`
+    : `<div class="stat"><div class="stat-l">AOV</div><div class="stat-v">${rp(dTot.aov)}${dl(dTot.aov, pD?pD.aov:null)}</div></div>
+       <div class="stat"><div class="stat-l">CTR LIVE</div><div class="stat-v">${pct(dTot.ctr)}${dl(dTot.ctr, pD?pD.ctr:null)}</div></div>
+       <div class="stat"><div class="stat-l">CTOR</div><div class="stat-v">${pct(dTot.ctor)}${dl(dTot.ctor, pD?pD.ctor:null)}</div></div>
+       <div class="stat"><div class="stat-l">GPM</div><div class="stat-v">${rp(dTot.gpm)}${dl(dTot.gpm, pD?pD.gpm:null)}</div></div>`;
   const convSecond = isAll||isS
     ? ``
     : `<div class="stats" style="margin-bottom:1.3rem">
-        <div class="stat"><div class="stat-l">Engagement</div><div class="stat-v">${pct(dTot.eng)}</div></div>
+        <div class="stat"><div class="stat-l">Engagement</div><div class="stat-v">${pct(dTot.eng)}${dl(dTot.eng, pD?pD.eng:null)}</div></div>
         <div class="stat" style="visibility:hidden"></div><div class="stat" style="visibility:hidden"></div><div class="stat" style="visibility:hidden"></div>
       </div>`;
 
   box.innerHTML = `
+    ${dNote?`<div style="font-size:11px;color:var(--text3);margin:0 0 10px">${dNote}</div>`:''}
     <div class="grp-head">Revenue</div>
     <div class="stats">
-      <div class="stat"><div class="stat-l">Total GMV</div><div class="stat-v good">${rp(tot.gmv)}</div></div>
+      <div class="stat"><div class="stat-l">Total GMV</div><div class="stat-v good">${rp(tot.gmv)}${dl(tot.gmv, pTot?pTot.gmv:null)}</div></div>
       <div class="stat"><div class="stat-l">Sesi</div><div class="stat-v">${data.length}<span style="font-size:12px;color:var(--text3)"> · ${closing} closing</span></div></div>
-      <div class="stat"><div class="stat-l">Total Pembeli</div><div class="stat-v">${N(tot.pembeli)}</div></div>
-      <div class="stat"><div class="stat-l">Items Sold</div><div class="stat-v">${N(tot.items)}</div></div>
+      <div class="stat"><div class="stat-l">Total Pembeli</div><div class="stat-v">${N(tot.pembeli)}${dl(tot.pembeli, pTot?pTot.pembeli:null)}</div></div>
+      <div class="stat"><div class="stat-l">Items Sold</div><div class="stat-v">${N(tot.items)}${dl(tot.items, pTot?pTot.items:null)}</div></div>
     </div>
     <div class="grp-head">Traffic</div>
     <div class="stats">
-      <div class="stat"><div class="stat-l">Viewers</div><div class="stat-v">${N(tot.viewers)}</div></div>
+      <div class="stat"><div class="stat-l">Viewers</div><div class="stat-v">${N(tot.viewers)}${dl(tot.viewers, pTot?pTot.viewers:null)}</div></div>
       ${trafficThird}
-      <div class="stat"><div class="stat-l">Klik Produk</div><div class="stat-v">${N(tot.klik)}</div></div>
-      <div class="stat"><div class="stat-l">Avg View Dur</div><div class="stat-v">${avgDur.toFixed(1)}<span style="font-size:12px;color:var(--text3)"> dtk</span></div></div>
+      <div class="stat"><div class="stat-l">Klik Produk</div><div class="stat-v">${N(tot.klik)}${dl(tot.klik, pTot?pTot.klik:null)}</div></div>
+      <div class="stat"><div class="stat-l">Avg View Dur</div><div class="stat-v">${avgDur.toFixed(1)}${dl(avgDur, pTot?pAvgDur:null)}<span style="font-size:12px;color:var(--text3)"> dtk</span></div></div>
     </div>
     <div class="grp-head">Engagement</div>
     <div class="stats">
-      <div class="stat"><div class="stat-l">Followers Baru</div><div class="stat-v">${N(tot.foll)}</div></div>
-      <div class="stat"><div class="stat-l">Likes</div><div class="stat-v">${N(tot.likes)}</div></div>
-      <div class="stat"><div class="stat-l">Komentar</div><div class="stat-v">${N(tot.kom)}</div></div>
-      <div class="stat"><div class="stat-l">Items / Sesi</div><div class="stat-v">${data.length?(tot.items/data.length).toFixed(1):'0'}</div></div>
+      <div class="stat"><div class="stat-l">Followers Baru</div><div class="stat-v">${N(tot.foll)}${dl(tot.foll, pTot?pTot.foll:null)}</div></div>
+      <div class="stat"><div class="stat-l">Likes</div><div class="stat-v">${N(tot.likes)}${dl(tot.likes, pTot?pTot.likes:null)}</div></div>
+      <div class="stat"><div class="stat-l">Komentar</div><div class="stat-v">${N(tot.kom)}${dl(tot.kom, pTot?pTot.kom:null)}</div></div>
+      <div class="stat"><div class="stat-l">Items / Sesi</div><div class="stat-v">${data.length?(tot.items/data.length).toFixed(1):'0'}${dl(data.length?tot.items/data.length:0, pTot&&pTot.sesi?pTot.items/pTot.sesi:null)}</div></div>
     </div>
     <div class="grp-head">Metrik Konversi (dihitung otomatis) · ${PLAT_LABEL[PLAT_VIEW]}</div>
     <div class="stats">
@@ -1009,11 +1037,8 @@ function renderDash(){
   } : null; }
   // badge delta kecil — hijau naik, merah turun (kosong kalau data kurang)
   function momDelta(curVal, prevVal){
-    if(!showMoM || momCutoff<=0 || prevVal==null || prevVal<=0 || curVal==null || curVal<=0) return '';
-    const d=Math.round((curVal/prevVal-1)*100);
-    const col=d>0?'var(--good)':(d<0?'#f87171':'var(--text3)');
-    const arr=d>0?'▲':(d<0?'▼':'');
-    return ` <span style="font-size:10px;font-weight:700;color:${col}">${(d>0?'+':'')+d}%${arr}</span>`;
+    if(!showMoM || momCutoff<=0) return '';
+    return deltaSpan(curVal, prevVal);
   }
 
   box.innerHTML=`
@@ -1087,7 +1112,7 @@ function renderDash(){
         </div>
       </div>
       <div style="display:flex;gap:16px;margin-top:8px;font-size:12px;color:var(--text2);flex-wrap:wrap">
-        <span>${hd.length} sesi</span><span>${p.toLocaleString('id-ID')} pembeli</span><span>${it.toLocaleString('id-ID')} items</span><span>${vw.toLocaleString('id-ID')} viewers</span><span>AOV ${rp(dd.aov)}${dAov}</span>${funnel}
+        <span>${hd.length} sesi</span><span>${p.toLocaleString('id-ID')} pembeli</span><span>${it.toLocaleString('id-ID')} items</span><span>${vw.toLocaleString('id-ID')} viewers${momDelta(vw, prevS?prevS.vw:null)}</span><span>AOV ${rp(dd.aov)}${dAov}</span>${funnel}
       </div>
       <div style="font-size:11px;color:var(--text3);margin-top:6px">Klik untuk lihat detail lengkap →</div>
     </div>`;
