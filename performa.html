@@ -275,9 +275,9 @@
           <option value="3">Sesi 3 (14:30–17:30)</option>
           <option value="4">Sesi 4 (18:30–21:30)</option>
         </select></div>
-        <div class="fg"><label>GMV (Rp)</label><input type="number" id="e_gmv" placeholder="0" /></div>
-        <div class="fg"><label>Pembeli</label><input type="number" id="e_pembeli" placeholder="0" /></div>
-        <div class="fg"><label>Items Sold</label><input type="number" id="e_items" placeholder="0" /></div>
+        <div class="fg"><label>GMV (Rp)</label><input type="text" inputmode="numeric" id="e_gmv" placeholder="0" /></div>
+        <div class="fg"><label>Pembeli</label><input type="text" inputmode="numeric" id="e_pembeli" placeholder="0" /></div>
+        <div class="fg"><label>Items Sold</label><input type="text" inputmode="numeric" id="e_items" placeholder="0" /></div>
         <div class="fg"><label>Durasi live</label>
           <div style="display:flex;align-items:center;gap:8px">
             <input type="number" id="e_durasi_jam" placeholder="0" min="0" style="width:64px" />
@@ -286,14 +286,14 @@
             <span class="hint" style="margin:0">menit</span>
           </div>
         </div>
-        <div class="fg"><label>Viewers</label><input type="number" id="e_viewers" placeholder="0" /></div>
-        <div class="fg" id="fg_e_impresi"><label>Impresi</label><input type="number" id="e_impresi" placeholder="0" /></div>
-        <div class="fg"><label>Klik Produk</label><input type="number" id="e_klik" placeholder="0" /></div>
-        <div class="fg" id="fg_e_atc" style="display:none"><label>ATC <span class="hint" style="display:inline;margin:0">(Add to Cart)</span></label><input type="number" id="e_atc" placeholder="0" /></div>
+        <div class="fg"><label>Viewers</label><input type="text" inputmode="numeric" id="e_viewers" placeholder="0" /></div>
+        <div class="fg" id="fg_e_impresi"><label>Impresi</label><input type="text" inputmode="numeric" id="e_impresi" placeholder="0" /></div>
+        <div class="fg"><label>Klik Produk</label><input type="text" inputmode="numeric" id="e_klik" placeholder="0" /></div>
+        <div class="fg" id="fg_e_atc" style="display:none"><label>ATC <span class="hint" style="display:inline;margin:0">(Add to Cart)</span></label><input type="text" inputmode="numeric" id="e_atc" placeholder="0" /></div>
         <div class="fg"><label>Avg View Dur (dtk)</label><input type="number" id="e_avg" placeholder="0" /></div>
-        <div class="fg"><label>Followers Baru</label><input type="number" id="e_foll" placeholder="0" /></div>
-        <div class="fg"><label>Likes</label><input type="number" id="e_likes" placeholder="0" /></div>
-        <div class="fg"><label>Komentar</label><input type="number" id="e_kom" placeholder="0" /></div>
+        <div class="fg"><label>Followers Baru</label><input type="text" inputmode="numeric" id="e_foll" placeholder="0" /></div>
+        <div class="fg"><label>Likes</label><input type="text" inputmode="numeric" id="e_likes" placeholder="0" /></div>
+        <div class="fg"><label>Komentar</label><input type="text" inputmode="numeric" id="e_kom" placeholder="0" /></div>
         <div class="fg"></div>
         <div class="fg full"><label>Screenshot Dashboard</label>
           <div id="e_ss_current" style="margin-bottom:8px"></div>
@@ -354,6 +354,19 @@ function deltaSpan(cur, prev){
   const arr=d>0?'▲':(d<0?'▼':'');
   return ` <span style="font-size:10px;font-weight:700;color:${col}">${(d>0?'+':'')+d}%${arr}</span>`;
 }
+// ── Input angka ala Indonesia: titik = pemisah ribuan (bukan desimal) ──
+// "410.256" maupun "410256" → 410256. Field bilangan bulat dibaca via intVal.
+function intVal(id){ const el=document.getElementById(id); if(!el) return 0; const x=parseInt(String(el.value).replace(/[^\d]/g,''),10); return isNaN(x)?0:x; }
+function floatVal(id){ const el=document.getElementById(id); if(!el) return 0; const x=parseFloat(String(el.value).replace(/[^\d.\-]/g,'')); return isNaN(x)?0:x; }
+function fmtThousands(el){ const digits=String(el.value).replace(/[^\d]/g,''); el.value = digits ? Number(digits).toLocaleString('id-ID') : ''; }
+function setupThousandInputs(ids){
+  ids.forEach(id=>{ const el=document.getElementById(id); if(!el) return;
+    fmtThousands(el);                               // format nilai awal (mis. saat modal Edit dibuka)
+    if(!el._fmtBound){ el._fmtBound=true; el.addEventListener('input',()=>fmtThousands(el)); }
+  });
+}
+const INT_FIELDS_F=['f_gmv','f_pembeli','f_items','f_viewers','f_impresi','f_klik','f_atc','f_foll','f_likes','f_kom'];
+const INT_FIELDS_E=['e_gmv','e_pembeli','e_items','e_viewers','e_impresi','e_klik','e_atc','e_foll','e_likes','e_kom'];
 function destroyCharts(){ Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}}); charts={}; }
 
 // Derived metrics
@@ -449,6 +462,7 @@ function buildHost(){
     `<div class="panel" id="p-mine"><div id="mineContent"><p class="empty">Memuat...</p></div></div>`;
   (function(){ const ft=document.getElementById('f_tanggal'); if(ft){ const d=new Date(); const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; ft.value=iso; ft.max=iso; } })();
   attachCalcListeners();
+  setupThousandInputs(INT_FIELDS_F);
   setupSSInput('f_ss_file','f_ss_drop','f_ss_prompt','f_ss_preview');
   loadHostData();
 }
@@ -556,9 +570,9 @@ function hostFormHTML(){
     </select><div class="hint">Live ulang karena error? Pilih sesi yang sama lagi.</div></div>
 
     <div class="group-label">Revenue</div>
-    <div class="fg"><label>GMV (Rp)</label><input type="number" id="f_gmv" placeholder="0" /></div>
-    <div class="fg"><label>Pembeli</label><input type="number" id="f_pembeli" placeholder="0" /></div>
-    <div class="fg"><label>Items Sold</label><input type="number" id="f_items" placeholder="0" /></div>
+    <div class="fg"><label>GMV (Rp)</label><input type="text" inputmode="numeric" id="f_gmv" placeholder="0" /></div>
+    <div class="fg"><label>Pembeli</label><input type="text" inputmode="numeric" id="f_pembeli" placeholder="0" /></div>
+    <div class="fg"><label>Items Sold</label><input type="text" inputmode="numeric" id="f_items" placeholder="0" /></div>
     <div class="fg"><label>Durasi live — opsional</label>
       <div style="display:flex;align-items:center;gap:8px">
         <input type="number" id="f_durasi_jam" placeholder="0" min="0" inputmode="numeric" style="width:64px" />
@@ -569,16 +583,16 @@ function hostFormHTML(){
     </div>
 
     <div class="group-label">Traffic</div>
-    <div class="fg"><label>Viewers</label><input type="number" id="f_viewers" placeholder="0" /></div>
-    <div class="fg" id="fg_f_impresi"><label>Impresi</label><input type="number" id="f_impresi" placeholder="0" /></div>
-    <div class="fg"><label>Klik Produk</label><input type="number" id="f_klik" placeholder="0" /></div>
-    <div class="fg" id="fg_f_atc" style="display:none"><label>ATC <span class="hint" style="display:inline;margin:0">(Add to Cart)</span></label><input type="number" id="f_atc" placeholder="0" /></div>
+    <div class="fg"><label>Viewers</label><input type="text" inputmode="numeric" id="f_viewers" placeholder="0" /></div>
+    <div class="fg" id="fg_f_impresi"><label>Impresi</label><input type="text" inputmode="numeric" id="f_impresi" placeholder="0" /></div>
+    <div class="fg"><label>Klik Produk</label><input type="text" inputmode="numeric" id="f_klik" placeholder="0" /></div>
+    <div class="fg" id="fg_f_atc" style="display:none"><label>ATC <span class="hint" style="display:inline;margin:0">(Add to Cart)</span></label><input type="text" inputmode="numeric" id="f_atc" placeholder="0" /></div>
     <div class="fg"><label>Avg View Duration (dtk)</label><input type="number" id="f_avg" placeholder="0" /></div>
 
     <div class="group-label">Engagement</div>
-    <div class="fg"><label>Followers Baru</label><input type="number" id="f_foll" placeholder="0" /></div>
-    <div class="fg"><label>Likes</label><input type="number" id="f_likes" placeholder="0" /></div>
-    <div class="fg"><label>Komentar</label><input type="number" id="f_kom" placeholder="0" /></div>
+    <div class="fg"><label>Followers Baru</label><input type="text" inputmode="numeric" id="f_foll" placeholder="0" /></div>
+    <div class="fg"><label>Likes</label><input type="text" inputmode="numeric" id="f_likes" placeholder="0" /></div>
+    <div class="fg"><label>Komentar</label><input type="text" inputmode="numeric" id="f_kom" placeholder="0" /></div>
     <div class="fg"></div>
 
     <div class="group-label">Screenshot Dashboard — opsional</div>
@@ -618,7 +632,7 @@ function applyFormPlatform(){
   updateCalc();
 }
 function updateCalc(){
-  const v=id=>+document.getElementById(id)?.value||0;
+  const v=intVal;
   const isS=(document.getElementById('f_platform')?.value)==='shopee';
   const r={gmv:v('f_gmv'),pembeli:v('f_pembeli'),impresi:v('f_impresi'),klik_produk:v('f_klik'),
            viewers:v('f_viewers'),likes:v('f_likes'),komentar:v('f_kom'),durasi_menit:v('f_durasi_jam')*60+v('f_durasi_min')};
@@ -723,7 +737,7 @@ async function submitPerforma(){
   const v=id=>document.getElementById(id).value;
   const n=id=>+document.getElementById(id).value||0;
   if(!v('f_tanggal')){alert('Pilih tanggal dulu.');return;}
-  if(n('f_gmv')===0 && n('f_viewers')===0){alert('Minimal isi GMV atau Viewers.');return;}
+  if(intVal('f_gmv')===0 && intVal('f_viewers')===0){alert('Minimal isi GMV atau Viewers.');return;}
   let screenshot_url=null;
   const ssFile=document.getElementById('f_ss_file')?.files[0];
   if(ssFile){
@@ -734,10 +748,10 @@ async function submitPerforma(){
     host:me.name, brand:me.brand, host_email:ME,
     tanggal:v('f_tanggal'), sesi:+v('f_sesi'),
     platform:v('f_platform')||'tiktok',
-    gmv:n('f_gmv'), pembeli:n('f_pembeli'), items:n('f_items'),
-    viewers:n('f_viewers'), impresi:n('f_impresi'), klik_produk:n('f_klik'), atc:n('f_atc'),
+    gmv:intVal('f_gmv'), pembeli:intVal('f_pembeli'), items:intVal('f_items'),
+    viewers:intVal('f_viewers'), impresi:intVal('f_impresi'), klik_produk:intVal('f_klik'), atc:intVal('f_atc'),
     avg_view_dur:n('f_avg'), durasi_menit:n('f_durasi_jam')*60+n('f_durasi_min'),
-    followers_baru:n('f_foll'), likes:n('f_likes'), komentar:n('f_kom'),
+    followers_baru:intVal('f_foll'), likes:intVal('f_likes'), komentar:intVal('f_kom'),
     screenshot_url,
   };
   const {error}=await sb.from('live_performance').insert([payload]);
@@ -1399,6 +1413,7 @@ function openEditSesi(id){
   set('e_durasi_jam', m?Math.floor(m/60):''); set('e_durasi_min', m? m%60 : '');
   set('e_viewers',r.viewers); set('e_impresi',r.impresi); set('e_klik',r.klik_produk); set('e_atc',r.atc);
   set('e_avg',r.avg_view_dur); set('e_foll',r.followers_baru); set('e_likes',r.likes); set('e_kom',r.komentar);
+  setupThousandInputs(INT_FIELDS_E);
   applyEditPlatform();
   // screenshot
   _editSSUrl = r.screenshot_url || null;
@@ -1435,10 +1450,10 @@ async function saveEditSesi(){
   const payload={
     tanggal:v('e_tanggal'), sesi:+v('e_sesi'),
     platform:v('e_platform')||'tiktok',
-    gmv:n('e_gmv'), pembeli:n('e_pembeli'), items:n('e_items'),
-    viewers:n('e_viewers'), impresi:n('e_impresi'), klik_produk:n('e_klik'), atc:n('e_atc'),
+    gmv:intVal('e_gmv'), pembeli:intVal('e_pembeli'), items:intVal('e_items'),
+    viewers:intVal('e_viewers'), impresi:intVal('e_impresi'), klik_produk:intVal('e_klik'), atc:intVal('e_atc'),
     avg_view_dur:n('e_avg'), durasi_menit:n('e_durasi_jam')*60+n('e_durasi_min'),
-    followers_baru:n('e_foll'), likes:n('e_likes'), komentar:n('e_kom'),
+    followers_baru:intVal('e_foll'), likes:intVal('e_likes'), komentar:intVal('e_kom'),
     screenshot_url,
   };
   const {data,error}=await sb.from('live_performance').update(payload).eq('id',_editId).select();
