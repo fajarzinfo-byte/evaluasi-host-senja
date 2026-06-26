@@ -324,12 +324,12 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // host email -> {name, brand}
 const HOST_MAP = {
-  'cintaafandi@gmail.com':         { name:'Sinta', brand:'Onebear' },
-  'sitifaridah332@gmail.com':      { name:'Indah', brand:'Onebear' },
-  'salamahsalma0712@gmail.com':    { name:'Salma', brand:'Supoe' },
-  'iklilunnadia12@gmail.com':      { name:'Nadya', brand:'Supoe' },
-  'tiasetiawati30082006@gmail.com':{ name:'Yaya',  brand:'Momso' },
-  'syafirasiti143@gmail.com':      { name:'Fira',  brand:'Momso' },
+  'cintaafandi@gmail.com':         { name:'Sinta', brands:['Onebear','Supoe'] },
+  'sitifaridah332@gmail.com':      { name:'Indah', brands:['Onebear','Supoe'] },
+  'salamahsalma0712@gmail.com':    { name:'Salma', brands:['Supoe','Onebear'] },
+  'iklilunnadia12@gmail.com':      { name:'Nadya', brands:['Supoe','Onebear'] },
+  'tiasetiawati30082006@gmail.com':{ name:'Yaya',  brands:['Momso'] },
+  'syafirasiti143@gmail.com':      { name:'Fira',  brands:['Momso'] },
 };
 // brand -> hosts split by sesi (pagi=1&2, sore=3&4). Default; bisa diubah di Import.
 const BRAND_HOSTS = {
@@ -337,7 +337,7 @@ const BRAND_HOSTS = {
   'Supoe':   { pagi:{name:'Nadya', email:'iklilunnadia12@gmail.com'}, sore:{name:'Salma', email:'salamahsalma0712@gmail.com'} },
   'Momso':   { pagi:{name:'Yaya', email:'tiasetiawati30082006@gmail.com'}, sore:{name:'Fira', email:'syafirasiti143@gmail.com'} },
 };
-const ALL_HOSTS = Object.entries(HOST_MAP).map(([email,v])=>({email, ...v,
+const ALL_HOSTS = Object.entries(HOST_MAP).map(([email,v])=>({email, name:v.name, brands:v.brands, brand:v.brands[0],
   color: ({Sinta:'#e879f9',Indah:'#a855f7',Salma:'#3b82f6',Nadya:'#06b6d4',Yaya:'#f97316',Fira:'#ef4444'})[v.name] }));
 
 let ROLE = null, ME = null, charts = {};
@@ -451,7 +451,7 @@ function initApp(email){
 function buildHost(){
   const me = HOST_MAP[ME];
   document.getElementById('greeting').textContent = 'Halo, '+me.name+'!';
-  document.getElementById('subtitle').textContent = 'Brand: '+me.brand;
+  document.getElementById('subtitle').textContent = 'Brand: '+me.brands.join(' · ');
   document.getElementById('tabs').innerHTML =
     `<div class="tab active" onclick="switchTab(this,'p-home')">Beranda</div>`+
     `<div class="tab" onclick="switchTab(this,'p-input')">Input Performa</div>`+
@@ -548,15 +548,31 @@ function goTab(panelId, tabIdx){
   document.getElementById(panelId).classList.add('active');
 }
 
+let MINE_BRAND=null;
 function renderMine(){
   const box=document.getElementById('mineContent');
   if(!myData.length){box.innerHTML='<p class="empty">Belum ada data performa. Isi lewat tab Input Performa.</p>';return;}
-  renderPerformanceView(box, myData, HOST_MAP[ME].name, 'mine');
+  const me=HOST_MAP[ME];
+  const multi=me.brands.length>1;
+  if(MINE_BRAND===null || (multi && !me.brands.includes(MINE_BRAND))) MINE_BRAND = multi ? me.brands[0] : '';
+  const data = (multi && MINE_BRAND) ? myData.filter(r=>r.brand===MINE_BRAND) : myData;
+  let head='';
+  if(multi){
+    head=`<div class="filter-row" style="margin-bottom:10px"><label style="font-size:13px;color:var(--text2)">Brand:</label>
+      <select onchange="MINE_BRAND=this.value;renderMine()">${me.brands.map(b=>`<option value="${b}" ${MINE_BRAND===b?'selected':''}>${b}</option>`).join('')}</select></div>`;
+  }
+  box.innerHTML = head + '<div id="mineInner"></div>';
+  renderPerformanceView(document.getElementById('mineInner'), data, me.name, 'mine');
 }
 
 function hostFormHTML(){
+  const me=HOST_MAP[ME];
+  const brandField = me.brands.length>1
+    ? `<div class="fg"><label>Brand</label><select id="f_brand">${me.brands.map(b=>`<option value="${b}">${b}</option>`).join('')}</select><div class="hint">Sesi ini untuk brand yang mana?</div></div>`
+    : `<input type="hidden" id="f_brand" value="${me.brands[0]}" />`;
   return `<div class="form-card"><div class="form-grid">
     <div class="group-label">Info Sesi</div>
+    ${brandField}
     <div class="fg"><label>Platform</label><select id="f_platform" onchange="applyFormPlatform()">
       <option value="tiktok">TikTok</option>
       <option value="shopee">Shopee</option>
@@ -744,8 +760,10 @@ async function submitPerforma(){
     try{ showToast('Mengupload screenshot...','info'); screenshot_url=await uploadScreenshot(ssFile, ME, v('f_tanggal'), v('f_sesi')); }
     catch(err){ showToast('Gagal upload screenshot: '+(err.message||err),'error'); return; }
   }
+  const selBrand = document.getElementById('f_brand')?.value;
+  const brand = (selBrand && me.brands.includes(selBrand)) ? selBrand : me.brands[0];
   const payload={
-    host:me.name, brand:me.brand, host_email:ME,
+    host:me.name, brand, host_email:ME,
     tanggal:v('f_tanggal'), sesi:+v('f_sesi'),
     platform:v('f_platform')||'tiktok',
     gmv:intVal('f_gmv'), pembeli:intVal('f_pembeli'), items:intVal('f_items'),
@@ -1077,10 +1095,10 @@ function renderDash(){
     <div class="chart-card"><h3>Perbandingan GMV antar host</h3><div class="chart-wrap"><canvas id="chCompare"></canvas></div></div>`;
 
   // host cards
-  const hosts = curBrand? ALL_HOSTS.filter(h=>h.brand===curBrand) : ALL_HOSTS;
+  const hosts = curBrand? ALL_HOSTS.filter(h=>h.brands.includes(curBrand)) : ALL_HOSTS;
   const cards = hosts.map(h=>{
     const hd=filtered.filter(r=>r.host_email===h.email);
-    if(!hd.length) return `<div class="tbl-wrap" style="padding:14px 16px;margin-bottom:8px"><b>${h.name}</b> <span class="badge">${h.brand}</span><div style="color:var(--text3);font-size:12px;margin-top:4px">Belum ada data</div></div>`;
+    if(!hd.length) return `<div class="tbl-wrap" style="padding:14px 16px;margin-bottom:8px"><b>${h.name}</b> <span class="badge">${curBrand||h.brands.join(' · ')}</span><div style="color:var(--text3);font-size:12px;margin-top:4px">Belum ada data</div></div>`;
     const g=hd.reduce((a,r)=>a+(+r.gmv||0),0);
     const p=hd.reduce((a,r)=>a+(+r.pembeli||0),0);
     const it=hd.reduce((a,r)=>a+(+r.items||0),0);
@@ -1119,7 +1137,7 @@ function renderDash(){
       : ``;
     return `<div class="tbl-wrap" style="padding:14px 16px;margin-bottom:8px;cursor:pointer" onclick="drilldown('${h.email}','${h.name}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <div><b>${h.name}</b> <span class="badge">${h.brand}</span></div>
+        <div><b>${h.name}</b> <span class="badge">${curBrand||h.brands.join(' · ')}</span></div>
         <div style="text-align:right">
           <div style="font-size:18px;font-weight:600;color:var(--good)">${rp(g)}</div>
           ${momBadge?`<div style="margin-top:2px">${momBadge}</div>`:''}
@@ -1164,7 +1182,7 @@ function renderCompare(){
 
   const periodLbl = curMonth==='' ? 'Akumulasi semua bulan' : (()=>{const[y,mo]=curMonth.split('-');return new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})})();
 
-  const hosts=ALL_HOSTS.filter(h=>h.brand===curBrand);
+  const hosts=ALL_HOSTS.filter(h=>h.brands.includes(curBrand));
   const rowsData=platFilter(allPerf.filter(r=>r.brand===curBrand && (!curMonth || (r.tanggal&&r.tanggal.startsWith(curMonth)))));
 
   const hd=hosts.map(h=>{
@@ -1390,9 +1408,9 @@ function drilldown(email,name){
   window._drillEmail=email; window._drillName=name;
   switchTabById('l-dash');
   const box=document.getElementById('dashContent');
-  const hd=allPerf.filter(r=>r.host_email===email).sort((a,b)=>(a.tanggal+a.sesi).localeCompare(b.tanggal+b.sesi));
+  const hd=allPerf.filter(r=>r.host_email===email && (!DASH_BRAND||r.brand===DASH_BRAND)).sort((a,b)=>(a.tanggal+a.sesi).localeCompare(b.tanggal+b.sesi));
   box.innerHTML=`<button class="btn-ghost" style="margin-bottom:14px" onclick="renderDash()">← Kembali ke dashboard</button>
-    <div class="section-title">Detail Performa — ${name}</div><div id="ddView"></div>`;
+    <div class="section-title">Detail Performa — ${name}${DASH_BRAND?` · ${DASH_BRAND}`:''}</div><div id="ddView"></div>`;
   renderPerformanceView(document.getElementById('ddView'), hd, name, 'drill', DASH_MONTH);
 }
 
@@ -1514,7 +1532,7 @@ function importHTML(){
 
 function updateImpHosts(){
   const brand=document.getElementById('impBrand').value;
-  const opts=ALL_HOSTS.filter(h=>h.brand===brand);
+  const opts=ALL_HOSTS.filter(h=>h.brands.includes(brand));
   const cfg=BRAND_HOSTS[brand];
   const mk=(sel)=>opts.map(h=>`<option value="${h.email}" ${h.email===sel?'selected':''}>${h.name}</option>`).join('');
   document.getElementById('impPagi').innerHTML=mk(cfg.pagi.email);
