@@ -526,9 +526,6 @@
       <label>Brand</label>
       <select id="brand" onchange="updateHostOptions()" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);outline:none;">
         <option value="">Pilih brand</option>
-        <option value="Onebear">Onebear</option>
-        <option value="Supoe">Supoe</option>
-        <option value="Momso">Momso</option>
       </select>
     </div>
     <div class="field">
@@ -601,9 +598,6 @@
       <div style="display:flex;gap:8px;align-items:center;">
         <select id="brand-filter" onchange="renderHistory()" style="padding:5px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);font-family:'Plus Jakarta Sans',sans-serif;font-size:12px;color:var(--text2);background:var(--surface);outline:none;">
           <option value="">Semua brand</option>
-          <option value="Onebear">Onebear</option>
-          <option value="Supoe">Supoe</option>
-          <option value="Momso">Momso</option>
         </select>
         <button class="btn-sm" onclick="exportCSV()">Export CSV</button>
       </div>
@@ -701,11 +695,28 @@ const SECTIONS = [
 const scores = {};
 let sessions = [];
 
-const HOST_MAP = {
-  'Onebear': ['Sinta', 'Indah'],
-  'Supoe': ['Salma', 'Nadya'],
-  'Momso': ['Yaya', 'Fira'],
-};
+// ── Config tim dinamis dari tabel app_config (dikelola lewat tab "Tim" di Beranda) ──
+let HOST_MAP = {};      // brand -> [nama host aktif]
+let HOST_EMAILS = {};   // nama host -> email
+let BRANDS = [];
+async function loadConfig(){
+  const {data,error}=await sb.from('app_config').select('hosts,brands').eq('id',1).single();
+  if(error||!data){ alert('Config tim belum ada di database.\nJalankan SQL setup app_config (Panduan bagian 3.7) lalu refresh.'); return false; }
+  BRANDS=data.brands||[]; HOST_MAP={}; HOST_EMAILS={};
+  BRANDS.forEach(b=>HOST_MAP[b]=[]);
+  Object.entries(data.hosts||{}).forEach(([email,v])=>{
+    HOST_EMAILS[v.name]=email;
+    if(v.active===false) return;                      // host nonaktif tidak muncul di form
+    (v.brands||[]).forEach(b=>{ if(HOST_MAP[b]) HOST_MAP[b].push(v.name); });
+  });
+  // isi dropdown brand (form & filter riwayat) dari config
+  const opts=BRANDS.map(b=>`<option value="${b}">${b}</option>`).join('');
+  const bSel=document.getElementById('brand');
+  if(bSel) bSel.innerHTML='<option value="">Pilih brand</option>'+opts;
+  const bFil=document.getElementById('brand-filter');
+  if(bFil) bFil.innerHTML='<option value="">Semua brand</option>'+opts;
+  return true;
+}
 
 function updateHostOptions(selectedHost) {
   const brand = document.getElementById('brand').value;
@@ -850,15 +861,7 @@ async function saveSession() {
     notes: document.getElementById(`notes_${sec.id}`).value.trim(),
   }));
 
-  // Get host email from mapping
-  const HOST_EMAILS = {
-    'Sinta': 'cintaafandi@gmail.com',
-    'Indah': 'sitifaridah332@gmail.com',
-    'Salma': 'salamahsalma0712@gmail.com',
-    'Nadya': 'iklilunnadia12@gmail.com',
-    'Yaya': 'tiasetiawati30082006@gmail.com',
-    'Fira': 'syafirasiti143@gmail.com',
-  };
+  // email host diambil dari config global (HOST_EMAILS)
 
   const target = document.getElementById('target').value.trim();
 
@@ -1051,6 +1054,7 @@ async function initApp() {
     if (document.getElementById('main-app').style.display === 'block') return;
     document.getElementById('login-wall').style.display = 'none';
     document.getElementById('main-app').style.display = 'block';
+    if(!(await loadConfig())) return;
     buildUI();
     fetchSessions();
   } else {

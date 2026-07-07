@@ -221,20 +221,23 @@ const SUPABASE_URL  = 'https://pwqozfqqaewjpnpkydpo.supabase.co';
 const SUPABASE_ANON = 'sb_publishable_1VeUHXivMJkjqKGnAP4_vw_tr614ZcW';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-const HOST_MAP = {
-  'tiasetiawati30082006@gmail.com': { name: 'Yaya',  brand: 'Momso'   },
-  'iklilunnadia12@gmail.com':       { name: 'Nadya', brand: 'Supoe'   },
-  'cintaafandi@gmail.com':          { name: 'Sinta', brand: 'Onebear' },
-  'salamahsalma0712@gmail.com':     { name: 'Salma', brand: 'Supoe'   },
-  'sitifaridah332@gmail.com':       { name: 'Indah', brand: 'Onebear' },
-  'syafirasiti143@gmail.com':       { name: 'Fira',  brand: 'Momso'   },
-};
-
-let chartInstance = null;
+// ── Config tim dinamis dari tabel app_config ──
+let HOST_MAP={};
+async function loadConfig(){
+  const {data,error}=await sb.from('app_config').select('hosts').eq('id',1).single();
+  if(error||!data) return false;
+  HOST_MAP={};
+  Object.entries(data.hosts||{}).forEach(([email,v])=>{
+    HOST_MAP[email]={name:v.name, brand:(v.brands||[]).join(' · '), active:v.active!==false};
+  });
+  return true;
+}
 
 async function loadHostData(email) {
+  if(!(await loadConfig())){ alert('Config tim belum ada di database. Hubungi leader.'); return; }
   const hostInfo = HOST_MAP[email];
   if (!hostInfo) { alert('Akun ini tidak terdaftar sebagai host.'); await sb.auth.signOut(); return; }
+  if (hostInfo.active===false) { alert('Akun kamu sudah dinonaktifkan. Hubungi leader ya.'); await sb.auth.signOut(); return; }
 
   document.getElementById('login-section').style.display = 'none';
   document.getElementById('app-section').style.display = 'block';

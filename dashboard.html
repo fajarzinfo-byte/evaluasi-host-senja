@@ -233,9 +233,6 @@
 
   <div class="brand-tabs">
     <div class="tab active" onclick="filterBrand('', this)">Semua</div>
-    <div class="tab" onclick="filterBrand('Onebear', this)">Onebear</div>
-    <div class="tab" onclick="filterBrand('Supoe', this)">Supoe</div>
-    <div class="tab" onclick="filterBrand('Momso', this)">Momso</div>
   </div>
 
   <div class="host-grid" id="host-grid"><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div></div>
@@ -260,14 +257,23 @@ const SUPABASE_ANON = 'sb_publishable_1VeUHXivMJkjqKGnAP4_vw_tr614ZcW';
 const LEADER_EMAIL  = 'fajarzinfo@gmail.com';
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
-const HOST_LIST = [
-  { name: 'Sinta', brand: 'Onebear', email: 'cintaafandi@gmail.com',          color: '#e879f9' },
-  { name: 'Indah', brand: 'Onebear', email: 'sitifaridah332@gmail.com',        color: '#a855f7' },
-  { name: 'Salma', brand: 'Supoe',   email: 'salamahsalma0712@gmail.com',      color: '#3b82f6' },
-  { name: 'Nadya', brand: 'Supoe',   email: 'iklilunnadia12@gmail.com',        color: '#06b6d4' },
-  { name: 'Yaya',  brand: 'Momso',   email: 'tiasetiawati30082006@gmail.com',  color: '#f97316' },
-  { name: 'Fira',  brand: 'Momso',   email: 'syafirasiti143@gmail.com',        color: '#ef4444' },
-];
+// ── Config tim dinamis dari tabel app_config (dikelola lewat tab "Tim" di Beranda) ──
+let HOST_LIST=[], BRANDS=[];
+const HOST_PALETTE=['#e879f9','#a855f7','#3b82f6','#06b6d4','#f97316','#ef4444','#22c55e','#eab308','#f472b6','#38bdf8'];
+async function loadConfig(){
+  const {data,error}=await sb.from('app_config').select('hosts,brands').eq('id',1).single();
+  if(error||!data){ alert('Config tim belum ada di database.\nJalankan SQL setup app_config (Panduan bagian 3.7) lalu refresh.'); return false; }
+  BRANDS=data.brands||[];
+  HOST_LIST=Object.entries(data.hosts||{}).map(([email,v],i)=>({
+    name:v.name, email, brands:v.brands||[], brand:(v.brands||[])[0]||'',
+    color:v.color||HOST_PALETTE[i%HOST_PALETTE.length], active:v.active!==false,
+  }));
+  // tab brand dinamis
+  const tabs=document.querySelector('.brand-tabs');
+  if(tabs) tabs.innerHTML='<div class="tab active" onclick="filterBrand(\'\', this)">Semua</div>'+
+    BRANDS.map(b=>`<div class="tab" onclick="filterBrand('${b}', this)">${b}</div>`).join('');
+  return true;
+}
 
 let allData = [];
 let activeBrand = '';
@@ -313,7 +319,10 @@ function filterBrand(brand, el) {
 
 function renderDashboard() {
   const filtered = getFilteredData();
-  const hosts = activeBrand ? HOST_LIST.filter(h => h.brand === activeBrand) : HOST_LIST;
+  const filteredForHosts = getFilteredData();
+  const hosts = (activeBrand ? HOST_LIST.filter(h => h.brands.includes(activeBrand)) : HOST_LIST)
+    .filter(h => h.active || filteredForHosts.some(d => d.host === h.name));
+  const shEl=document.getElementById('s-hosts'); if(shEl) shEl.textContent = HOST_LIST.filter(h=>h.active).length;
 
   // Summary stats
   const allAvgs = filtered.map(d => parseFloat(d.avg)).filter(v => !isNaN(v));
@@ -363,7 +372,7 @@ function renderDashboard() {
             <div class="host-avatar" style="background:${h.color};width:32px;height:32px;font-size:13px">${h.name[0]}</div>
             <div>
               <div class="host-name">${h.name}</div>
-              <span class="host-brand-badge">${h.brand}</span>
+              <span class="host-brand-badge">${h.brands.join(' · ')}</span>
             </div>
           </div>
         </div>
@@ -448,13 +457,13 @@ function exportPDF() {
   // Summary table per host
   const rows = HOST_LIST.map(h => {
     const hData = filtered.filter(d => d.host === h.name);
-    if (!hData.length) return [h.name, h.brand, '—', '—', '—', '—'];
+    if (!hData.length) return [h.name, h.brands.join(' · '), '—', '—', '—', '—'];
     const avgs = hData.map(d => parseFloat(d.avg));
     const latest = avgs[avgs.length-1];
     const best = Math.max(...avgs);
     const trend = avgs.length >= 2 ? (avgs[avgs.length-1] - avgs[avgs.length-2]).toFixed(1) : '—';
     const verdict = latest >= 4 ? 'Sangat Baik' : latest >= 3 ? 'Cukup Baik' : 'Perlu Improvement';
-    return [h.name, h.brand, hData.length, latest.toFixed(1) + '/5', best.toFixed(1) + '/5', verdict];
+    return [h.name, h.brands.join(' · '), hData.length, latest.toFixed(1) + '/5', best.toFixed(1) + '/5', verdict];
   });
 
   doc.autoTable({
@@ -476,7 +485,7 @@ function exportPDF() {
 
     doc.setFontSize(12);
     doc.setFont('helvetica', 'bold');
-    doc.text(h.name + ' (' + h.brand + ')', 14, y);
+    doc.text(h.name + ' (' + h.brands.join(' · ') + ')', 14, y);
     y += 6;
 
     const detailRows = hData.reverse().map(ev => {
@@ -512,6 +521,7 @@ async function initApp() {
     }
     document.getElementById('login-section').style.display = 'none';
     document.getElementById('app-section').style.display = 'block';
+    if(!(await loadConfig())) return;
     await loadData();
   } else {
     // Login terpusat di Beranda — tampilkan layar pengalihan lalu arahkan

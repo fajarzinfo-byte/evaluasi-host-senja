@@ -261,6 +261,8 @@
   .skel-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
   @media (min-width:1100px){ .skel-grid{ grid-template-columns:repeat(4,1fr); } }
   .h-ava{ width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; color:#fff; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.35); font-family:'Space Grotesk','Plus Jakarta Sans',sans-serif; }
+  .swatch{ width:26px; height:26px; border-radius:50%; border:2px solid transparent; cursor:pointer; margin:0 6px 6px 0; padding:0; }
+  .swatch.sel{ border-color:#fff; box-shadow:0 0 0 2px var(--accent); }
   .tbl-scroll{ max-height:540px; overflow:auto; }
   .tbl-scroll th{ position:sticky; top:0; z-index:2; }
   tbody tr:nth-child(even) td{ background:rgba(255,255,255,.025); }
@@ -376,24 +378,36 @@ const SUPABASE_ANON = 'sb_publishable_1VeUHXivMJkjqKGnAP4_vw_tr614ZcW';
 const LEADER_EMAIL  = 'fajarzinfo@gmail.com';
 const VIEWER_EMAILS = ['niathian@gmail.com'];   // HRD — read-only, lihat Performa saja
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+// klien terpisah untuk signUp host baru — tidak menyentuh sesi login leader
+const sbSignup = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {auth:{persistSession:false, autoRefreshToken:false, storageKey:'senja-signup'}});
 
-// host email -> {name, brand}
-const HOST_MAP = {
-  'cintaafandi@gmail.com':         { name:'Sinta', brands:['Onebear','Supoe'] },
-  'sitifaridah332@gmail.com':      { name:'Indah', brands:['Onebear','Supoe'] },
-  'salamahsalma0712@gmail.com':    { name:'Salma', brands:['Supoe','Onebear'] },
-  'iklilunnadia12@gmail.com':      { name:'Nadya', brands:['Supoe','Onebear'] },
-  'tiasetiawati30082006@gmail.com':{ name:'Yaya',  brands:['Momso'] },
-  'syafirasiti143@gmail.com':      { name:'Fira',  brands:['Momso'] },
-};
-// brand -> hosts split by sesi (pagi=1&2, sore=3&4). Default; bisa diubah di Import.
-const BRAND_HOSTS = {
-  'Onebear': { pagi:{name:'Sinta', email:'cintaafandi@gmail.com'}, sore:{name:'Indah', email:'sitifaridah332@gmail.com'} },
-  'Supoe':   { pagi:{name:'Nadya', email:'iklilunnadia12@gmail.com'}, sore:{name:'Salma', email:'salamahsalma0712@gmail.com'} },
-  'Momso':   { pagi:{name:'Yaya', email:'tiasetiawati30082006@gmail.com'}, sore:{name:'Fira', email:'syafirasiti143@gmail.com'} },
-};
-const ALL_HOSTS = Object.entries(HOST_MAP).map(([email,v])=>({email, name:v.name, brands:v.brands, brand:v.brands[0],
-  color: ({Sinta:'#e879f9',Indah:'#a855f7',Salma:'#3b82f6',Nadya:'#06b6d4',Yaya:'#f97316',Fira:'#ef4444'})[v.name] }));
+// ── Config tim dinamis: host & brand disimpan di tabel app_config (Supabase),
+// dikelola lewat tab "Tim" di panel leader — tidak perlu edit file lagi. ──
+let HOST_MAP={}, BRANDS=[], BRAND_HOSTS={}, ALL_HOSTS=[];
+const HOST_PALETTE=['#e879f9','#a855f7','#3b82f6','#06b6d4','#f97316','#ef4444','#22c55e','#eab308','#f472b6','#38bdf8'];
+const BRAND_PALETTE=['#e879f9','#3b82f6','#f97316','#34d399','#a78bfa','#fbbf24','#fb7185','#60a5fa'];
+const brandColor = b => BRAND_PALETTE[Math.max(0,BRANDS.indexOf(b)) % BRAND_PALETTE.length];
+
+function applyConfig(cfg){
+  HOST_MAP=(cfg&&cfg.hosts)||{};
+  BRANDS=(cfg&&cfg.brands)||[];
+  ALL_HOSTS=Object.entries(HOST_MAP).map(([email,v],i)=>({
+    email, name:v.name, brands:v.brands||[], brand:(v.brands||[])[0],
+    color:v.color||HOST_PALETTE[i%HOST_PALETTE.length],
+    active:v.active!==false,
+  }));
+  // default host pagi/sore saat import = host aktif pertama & kedua per brand (bisa diganti manual)
+  BRAND_HOSTS={};
+  BRANDS.forEach(b=>{
+    const hs=ALL_HOSTS.filter(h=>h.active&&h.brands.includes(b));
+    if(hs.length) BRAND_HOSTS[b]={pagi:{name:hs[0].name,email:hs[0].email},sore:{name:(hs[1]||hs[0]).name,email:(hs[1]||hs[0]).email}};
+  });
+}
+async function loadConfig(){
+  const {data,error}=await sb.from('app_config').select('hosts,brands').eq('id',1).single();
+  if(error||!data){ alert('Config tim belum ada di database.\nJalankan SQL setup app_config (Panduan bagian 3.7) lalu refresh halaman.'); return false; }
+  applyConfig(data); return true;
+}
 
 let ROLE = null, ME = null, charts = {};
 
@@ -532,19 +546,23 @@ async function doLogin(){
     document.getElementById('loginBtn').textContent='Masuk'; document.getElementById('loginBtn').disabled=false;
     return;
   }
-  initApp(data.user.email.toLowerCase());
+  await initApp(data.user.email.toLowerCase());
 }
 
 async function init(){
   const {data:{session}}=await sb.auth.getSession();
-  if(session) initApp(session.user.email.toLowerCase());
+  if(session) await initApp(session.user.email.toLowerCase());
 }
 
-function initApp(email){
+async function initApp(email){
+  if(!(await loadConfig())) return;
   ME = email;
   if(email===LEADER_EMAIL){ ROLE='leader'; }
   else if(VIEWER_EMAILS.includes(email)){ ROLE='viewer'; }
-  else if(HOST_MAP[email]){ ROLE='host'; }
+  else if(HOST_MAP[email]){
+    if(HOST_MAP[email].active===false){ alert('Akun kamu sudah dinonaktifkan. Hubungi leader ya.'); sb.auth.signOut(); return; }
+    ROLE='host';
+  }
   else { alert('Akun tidak dikenali.'); sb.auth.signOut(); return; }
 
   document.getElementById('login').style.display='none';
@@ -1059,14 +1077,17 @@ function buildLeader(){
     `<div class="tab" onclick="switchTab(this,'l-dash')">Dashboard Performa</div>`+
     `<div class="tab" onclick="switchTab(this,'l-compare')">Banding</div>`+
     `<div class="tab" onclick="switchTab(this,'l-trend')">Tren</div>`+
-    (isViewer ? '' : `<div class="tab" onclick="switchTab(this,'l-import')">Import Data</div>`);
+    (isViewer ? '' : `<div class="tab" onclick="switchTab(this,'l-import')">Import Data</div>`)+
+    (isViewer ? '' : `<div class="tab" onclick="switchTab(this,'l-team')">Tim</div>`);
   document.getElementById('panels').innerHTML =
     `<div class="panel active" id="l-home"><div id="leaderHome">${SKEL}</div></div>`+
     `<div class="panel" id="l-dash"><div id="dashContent">${SKEL}</div></div>`+
     `<div class="panel" id="l-compare"><div id="compareContent">${SKEL}</div></div>`+
     `<div class="panel" id="l-trend"><div id="trendContent">${SKEL}</div></div>`+
-    (isViewer ? '' : `<div class="panel" id="l-import">${importHTML()}</div>`);
+    (isViewer ? '' : `<div class="panel" id="l-import">${importHTML()}</div>`)+
+    (isViewer ? '' : `<div class="panel" id="l-team"><div id="teamContent">${SKEL}</div></div>`);
   if(!isViewer) setupDrop();
+  if(!isViewer) renderTeam();
   loadDash();
 }
 
@@ -1100,7 +1121,7 @@ function renderLeaderHome(){
   const note=pt.n ? `Dibanding ${monthLabel(pm)} pada periode yang sama (${winLbl}).` : '';
 
   // per-brand GMV bulan terpilih + delta vs bulan lalu (dinamis dari HOST_MAP)
-  const brands=[...new Set(ALL_HOSTS.flatMap(h=>h.brands))];
+  const brands=BRANDS;
   const brandStats=brands.map(b=>{
     const bd=md.filter(r=>r.brand===b);
     const pg=pd.filter(r=>r.brand===b).reduce((a,r)=>a+(+r.gmv||0),0);
@@ -1254,7 +1275,7 @@ function renderDash(){
     <div class="chart-card"><h3>Perbandingan GMV antar host</h3><div class="chart-wrap"><canvas id="chCompare"></canvas></div></div>`;
 
   // host cards
-  const hosts = curBrand? ALL_HOSTS.filter(h=>h.brands.includes(curBrand)) : ALL_HOSTS;
+  const hosts = (curBrand? ALL_HOSTS.filter(h=>h.brands.includes(curBrand)) : ALL_HOSTS).filter(h=>h.active || filtered.some(r=>r.host_email===h.email));
   const cards = hosts.map(h=>{
     const hd=filtered.filter(r=>r.host_email===h.email);
     if(!hd.length) return `<div class="tbl-wrap" style="padding:14px 16px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:10px"><div class="h-ava" style="background:${h.color||'var(--accent)'}">${h.name[0]}</div><div><b>${h.name}</b> <span class="badge">${curBrand||h.brands.join(' · ')}</span><div style="color:var(--text3);font-size:12px;margin-top:2px">Belum ada data</div></div></div></div>`;
@@ -1296,7 +1317,7 @@ function renderDash(){
       : ``;
     return `<div class="tbl-wrap" style="padding:14px 16px;margin-bottom:8px;cursor:pointer" onclick="drilldown('${h.email}','${h.name}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <div style="display:flex;align-items:center;gap:10px"><div class="h-ava" style="background:${h.color||'var(--accent)'}">${h.name[0]}</div><div><b>${h.name}</b> <span class="badge">${curBrand||h.brands.join(' · ')}</span></div></div>
+        <div style="display:flex;align-items:center;gap:10px"><div class="h-ava" style="background:${h.color||'var(--accent)'}">${h.name[0]}</div><div><b>${h.name}</b> <span class="badge">${curBrand||h.brands.join(' · ')}</span>${h.active?'':' <span style="font-size:10px;color:var(--text3)">(nonaktif)</span>'}</div></div>
         <div style="text-align:right">
           <div style="font-size:18px;font-weight:600;color:var(--good)">${rp(g)}</div>
           ${momBadge?`<div style="margin-top:2px">${momBadge}</div>`:''}
@@ -1341,8 +1362,8 @@ function renderCompare(){
 
   const periodLbl = curMonth==='' ? 'Akumulasi semua bulan' : (()=>{const[y,mo]=curMonth.split('-');return new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})})();
 
-  const hosts=ALL_HOSTS.filter(h=>h.brands.includes(curBrand));
   const rowsData=platFilter(allPerf.filter(r=>r.brand===curBrand && (!curMonth || (r.tanggal&&r.tanggal.startsWith(curMonth)))));
+  const hosts=ALL_HOSTS.filter(h=>h.brands.includes(curBrand)).filter(h=>h.active || rowsData.some(r=>r.host_email===h.email));
 
   const hd=hosts.map(h=>{
     const hr=rowsData.filter(r=>r.host_email===h.email);
@@ -1437,11 +1458,6 @@ function renderCompare(){
 // ════════════════════════════════════
 // TREN BRAND (bulan ke bulan, per brand, bulan berjalan dilabeli)
 // ════════════════════════════════════
-const TREND_BRANDS=[
-  {name:'Onebear', color:'#e879f9'},
-  {name:'Supoe',   color:'#3b82f6'},
-  {name:'Momso',   color:'#f97316'},
-];
 const TREND_METRICS={
   gmv: {label:'GMV',        type:'money', val:s=>s.gmv},
   aov: {label:'AOV',        type:'money', val:s=>s.pembeli? s.gmv/s.pembeli : 0},
@@ -1452,6 +1468,7 @@ const TREND_METRICS={
 };
 
 function renderTrend(){
+  const TREND_BRANDS=BRANDS.map(b=>({name:b, color:brandColor(b)}));
   const box=document.getElementById('trendContent');
   if(!box) return;
 
@@ -1664,15 +1681,185 @@ async function afterPerfChange(){
   }
 }
 
+
+// ════════════════════════════════════
+// TIM — kelola host & brand lewat UI (config tersimpan di app_config)
+// ════════════════════════════════════
+let TEAM_EDIT=null, TEAM_COLOR=null;
+
+function teamNextColor(){
+  const used=ALL_HOSTS.map(h=>h.color);
+  return HOST_PALETTE.find(c=>!used.includes(c)) || HOST_PALETTE[ALL_HOSTS.length%HOST_PALETTE.length];
+}
+function teamPickColor(c){ TEAM_COLOR=c; document.querySelectorAll('#teamForm .swatch').forEach(el=>el.classList.toggle('sel', el.dataset.c===c)); }
+
+function renderTeam(){
+  const box=document.getElementById('teamContent'); if(!box) return;
+  const edit = TEAM_EDIT? HOST_MAP[TEAM_EDIT] : null;
+  if(TEAM_COLOR===null) TEAM_COLOR = edit? (edit.color||teamNextColor()) : teamNextColor();
+
+  const hostCards = ALL_HOSTS.map(h=>`
+    <div class="tbl-wrap" style="padding:13px 16px;margin-bottom:8px;${h.active?'':'opacity:.55'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:10px;min-width:200px">
+          <div class="h-ava" style="background:${h.color}">${h.name[0]}</div>
+          <div><b>${h.name}</b>${h.active?'':' <span class="badge" style="background:var(--bad-bg);color:var(--bad)">nonaktif</span>'}
+            <div style="font-size:11px;color:var(--text3)">${h.email}</div></div>
+        </div>
+        <div>${h.brands.map(b=>`<span class="badge" style="margin-right:4px">${b}</span>`).join('')||'<span style="font-size:11px;color:var(--text3)">belum pegang brand</span>'}</div>
+        <div style="display:flex;gap:6px">
+          <button class="btn-ghost" onclick="teamEditHost('${h.email}')">Edit</button>
+          <button class="btn-ghost" onclick="teamToggleHost('${h.email}')">${h.active?'Nonaktifkan':'Aktifkan'}</button>
+        </div>
+      </div>
+    </div>`).join('') || '<p class="empty">Belum ada host — tambahkan lewat form di bawah.</p>';
+
+  const brandChecks = BRANDS.map(b=>{
+    const on = edit? (edit.brands||[]).includes(b) : false;
+    return `<label style="display:inline-flex;align-items:center;gap:6px;margin:0 14px 6px 0;font-size:13px;cursor:pointer">
+      <input type="checkbox" id="t_b_${b}" ${on?'checked':''}> ${b}</label>`;
+  }).join('');
+  const swatches = HOST_PALETTE.map(c=>`<button type="button" class="swatch ${c===TEAM_COLOR?'sel':''}" data-c="${c}" style="background:${c}" onclick="teamPickColor('${c}')" title="${c}"></button>`).join('');
+
+  const brandRows = BRANDS.map(b=>{
+    const n=ALL_HOSTS.filter(h=>h.active&&h.brands.includes(b)).length;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
+      <div><span class="h-ava" style="display:inline-flex;width:14px;height:14px;vertical-align:middle;margin-right:8px;background:${brandColor(b)}"></span><b>${b}</b> <span style="font-size:11px;color:var(--text3)">· ${n} host aktif</span></div>
+      <div style="display:flex;gap:6px">
+        <button class="btn-ghost" onclick="teamRenameBrand('${b}')">Ganti nama</button>
+        <button class="btn-ghost" onclick="teamDeleteBrand('${b}')">Hapus</button>
+      </div>
+    </div>`;
+  }).join('') || '<p class="empty">Belum ada brand.</p>';
+
+  box.innerHTML=`
+    <div class="section-title">Host</div>
+    ${hostCards}
+
+    <div class="form-card" id="teamForm" style="margin-top:1rem">
+      <div class="group-label">${edit?`Edit host: ${edit.name}`:'Tambah host baru'}</div>
+      <div class="form-grid">
+        <div class="fg"><label>Nama panggilan</label><input id="t_nama" value="${edit?edit.name:''}" placeholder="mis. Dewi"></div>
+        <div class="fg"><label>Email (untuk login)</label><input id="t_email" value="${TEAM_EDIT||''}" ${edit?'disabled':''} placeholder="dewi@gmail.com"></div>
+        ${edit?'':'<div class="fg"><label>Password awal (min. 6)</label><input id="t_pass" placeholder="mis. Dewi2026!"><div class="hint">Kasih tahu host; dia bisa langsung login.</div></div>'}
+        <div class="fg full"><label>Brand yang dipegang</label><div style="padding-top:4px">${brandChecks||'<span class="hint">Tambahkan brand dulu di bawah.</span>'}</div></div>
+        <div class="fg full"><label>Warna avatar</label><div style="padding-top:4px">${swatches}</div></div>
+        <div class="fg full" style="flex-direction:row;gap:10px">
+          <button class="btn-accent" id="t_submit" onclick="teamSubmitHost()">${edit?'Simpan Perubahan':'+ Tambah Host'}</button>
+          ${edit?'<button class="btn-ghost" onclick="teamCancelEdit()">Batal</button>':''}
+        </div>
+      </div>
+      ${edit?'<div class="hint" style="margin-top:8px">Ganti password / hapus akun permanen tetap lewat Supabase → Authentication → Users (jarang dibutuhkan).</div>':''}
+    </div>
+
+    <div class="section-title" style="margin-top:1.6rem">Brand</div>
+    <div class="form-card">
+      ${brandRows}
+      <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
+        <input id="t_newbrand" placeholder="Nama brand baru" style="flex:1;max-width:260px;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--rs);font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);background:var(--surface);outline:none">
+        <button class="btn-accent" onclick="teamAddBrand()">+ Tambah Brand</button>
+      </div>
+      <div class="hint" style="margin-top:8px">Ganti nama brand bisa sekalian mengubah data lama. Hapus brand hanya bisa kalau tidak ada host aktif yang memegangnya; data historis tetap tersimpan.</div>
+    </div>`;
+}
+
+function teamEditHost(email){ TEAM_EDIT=email; TEAM_COLOR=(HOST_MAP[email]&&HOST_MAP[email].color)||null; renderTeam(); document.getElementById('teamForm').scrollIntoView({behavior:'smooth',block:'center'}); }
+function teamCancelEdit(){ TEAM_EDIT=null; TEAM_COLOR=null; renderTeam(); }
+
+async function teamSaveConfig(newHosts, newBrands, msg){
+  const {error}=await sb.from('app_config').update({hosts:newHosts, brands:newBrands, updated_at:new Date().toISOString()}).eq('id',1);
+  if(error){ showToast('Gagal menyimpan: '+error.message,'error'); return false; }
+  applyConfig({hosts:newHosts, brands:newBrands});
+  showToast(msg,'success');
+  TEAM_COLOR=null; renderTeam();
+  // segarkan tampilan lain yang bergantung config
+  if(document.getElementById('leaderHome')) renderLeaderHome();
+  if(document.getElementById('dashContent') && !window._drillEmail) renderDash();
+  if(document.getElementById('compareContent')) renderCompare();
+  if(document.getElementById('trendContent')) renderTrend();
+  const ib=document.getElementById('impBrand');
+  if(ib){ const cur=ib.value; ib.innerHTML=BRANDS.map(b=>`<option value="${b}" ${b===cur?'selected':''}>${b}</option>`).join(''); updateImpHosts(); }
+  return true;
+}
+
+async function teamSubmitHost(){
+  const name=(document.getElementById('t_nama').value||'').trim();
+  const email=TEAM_EDIT || (document.getElementById('t_email').value||'').trim().toLowerCase();
+  const brandsSel=BRANDS.filter(b=>{ const el=document.getElementById('t_b_'+b); return el&&el.checked; });
+  if(!name){ showToast('Isi nama dulu.','error'); return; }
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ showToast('Email tidak valid.','error'); return; }
+  if(!brandsSel.length){ showToast('Pilih minimal satu brand.','error'); return; }
+  const color=TEAM_COLOR||teamNextColor();
+
+  if(TEAM_EDIT){
+    const hosts={...HOST_MAP, [TEAM_EDIT]:{...HOST_MAP[TEAM_EDIT], name, brands:brandsSel, color}};
+    TEAM_EDIT=null;
+    await teamSaveConfig(hosts, BRANDS, 'Perubahan '+name+' tersimpan.');
+    return;
+  }
+  // tambah baru
+  if(HOST_MAP[email]){ showToast('Email ini sudah terdaftar sebagai host.','error'); return; }
+  if(email===LEADER_EMAIL||VIEWER_EMAILS.includes(email)){ showToast('Email ini dipakai leader/HRD.','error'); return; }
+  const pass=(document.getElementById('t_pass').value||'');
+  if(pass.length<6){ showToast('Password minimal 6 karakter.','error'); return; }
+  const btn=document.getElementById('t_submit'); btn.disabled=true; btn.textContent='Membuat akun...';
+  const {error}=await sbSignup.auth.signUp({email, password:pass});
+  if(error && !/already|registered|exists/i.test(error.message)){
+    showToast('Gagal membuat akun: '+error.message,'error');
+    btn.disabled=false; btn.textContent='+ Tambah Host'; return;
+  }
+  if(error) showToast('Akun email ini sudah ada di sistem login — dipakai ulang (password lama tetap berlaku).','info');
+  const hosts={...HOST_MAP, [email]:{name, brands:brandsSel, color, active:true}};
+  await teamSaveConfig(hosts, BRANDS, 'Host '+name+' berhasil ditambahkan — sudah bisa login.');
+}
+
+async function teamToggleHost(email){
+  const h=HOST_MAP[email]; if(!h) return;
+  const to=!(h.active!==false);
+  const msg=to? 'Aktifkan lagi '+h.name+'?' : 'Nonaktifkan '+h.name+'?\nDia tidak bisa login & input lagi. Data lamanya tetap tersimpan dan tampil di dashboard.';
+  if(!confirm(msg)) return;
+  const hosts={...HOST_MAP, [email]:{...h, active:to}};
+  await teamSaveConfig(hosts, BRANDS, h.name+(to?' diaktifkan lagi.':' dinonaktifkan.'));
+}
+
+async function teamAddBrand(){
+  const b=(document.getElementById('t_newbrand').value||'').trim();
+  if(!b){ showToast('Isi nama brand dulu.','error'); return; }
+  if(BRANDS.some(x=>x.toLowerCase()===b.toLowerCase())){ showToast('Brand ini sudah ada.','error'); return; }
+  await teamSaveConfig(HOST_MAP, [...BRANDS, b], 'Brand '+b+' ditambahkan.');
+}
+
+async function teamRenameBrand(old){
+  const nn=(prompt('Nama baru untuk brand "'+old+'":', old)||'').trim();
+  if(!nn||nn===old) return;
+  if(BRANDS.some(x=>x.toLowerCase()===nn.toLowerCase())){ showToast('Nama itu sudah dipakai brand lain.','error'); return; }
+  const also=confirm('Sekalian ubah semua data lama (sesi live & evaluasi) dari "'+old+'" ke "'+nn+'"?\nOK = ya (disarankan) · Cancel = hanya nama ke depan.');
+  const hosts=Object.fromEntries(Object.entries(HOST_MAP).map(([e,v])=>[e,{...v, brands:(v.brands||[]).map(b=>b===old?nn:b)}]));
+  const brands=BRANDS.map(b=>b===old?nn:b);
+  if(also){
+    const r1=await sb.from('live_performance').update({brand:nn}).eq('brand',old);
+    const r2=await sb.from('evaluasi_host').update({brand:nn}).eq('brand',old);
+    if(r1.error||r2.error){ showToast('Sebagian data lama gagal diubah: '+((r1.error||r2.error).message),'error'); }
+    allPerf=allPerf.map(r=>r.brand===old?{...r,brand:nn}:r);
+    myData=myData.map(r=>r.brand===old?{...r,brand:nn}:r);
+  }
+  await teamSaveConfig(hosts, brands, 'Brand "'+old+'" jadi "'+nn+'".');
+}
+
+async function teamDeleteBrand(b){
+  if(ALL_HOSTS.some(h=>h.active&&h.brands.includes(b))){ showToast('Masih ada host aktif yang memegang '+b+' — pindahkan dulu lewat Edit host.','error'); return; }
+  if(!confirm('Hapus brand "'+b+'" dari daftar?\nData historis dengan nama ini tetap tersimpan di database.')) return;
+  const hosts=Object.fromEntries(Object.entries(HOST_MAP).map(([e,v])=>[e,{...v, brands:(v.brands||[]).filter(x=>x!==b)}]));
+  await teamSaveConfig(hosts, BRANDS.filter(x=>x!==b), 'Brand '+b+' dihapus.');
+}
+
 // ── Import ──
 function importHTML(){
   return `<div class="form-card">
     <div style="margin-bottom:14px;font-size:13px;color:var(--text2)">Upload export <b>TikTok LIVE (.xlsx)</b> atau <b>Shopee (.csv)</b>. Format dideteksi otomatis. Sistem membagi data ke host &amp; sesi berdasarkan jam. Sesi error/kosong (GMV &amp; viewers = 0) otomatis dilewati. <span style="color:var(--text3)">Shopee suka pisah jadi beberapa file — import satu per satu.</span></div>
     <div class="fg" style="margin-bottom:14px"><label>Brand file ini</label>
       <select id="impBrand" onchange="updateImpHosts();reprocessIfLoaded()">
-        <option value="Onebear">Onebear</option>
-        <option value="Supoe">Supoe</option>
-        <option value="Momso">Momso</option>
+        ${BRANDS.map(b=>`<option value="${b}">${b}</option>`).join('')}
       </select>
     </div>
     <div class="form-grid" style="margin-bottom:14px">
@@ -1691,8 +1878,13 @@ function importHTML(){
 
 function updateImpHosts(){
   const brand=document.getElementById('impBrand').value;
-  const opts=ALL_HOSTS.filter(h=>h.brands.includes(brand));
+  const opts=ALL_HOSTS.filter(h=>h.active && h.brands.includes(brand));
   const cfg=BRAND_HOSTS[brand];
+  if(!cfg||!opts.length){
+    document.getElementById('impPagi').innerHTML='<option value="">— belum ada host aktif —</option>';
+    document.getElementById('impSore').innerHTML='<option value="">— belum ada host aktif —</option>';
+    return;
+  }
   const mk=(sel)=>opts.map(h=>`<option value="${h.email}" ${h.email===sel?'selected':''}>${h.name}</option>`).join('');
   document.getElementById('impPagi').innerHTML=mk(cfg.pagi.email);
   document.getElementById('impSore').innerHTML=mk(cfg.sore.email);
