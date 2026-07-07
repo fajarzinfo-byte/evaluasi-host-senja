@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0c17">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Senja Studio">
 <title>Hasil Evaluasi — Host</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>window.Chart&&(Chart.defaults.color='#b0aacb',Chart.defaults.borderColor='rgba(255,255,255,.07)',Chart.defaults.font.family="'Plus Jakarta Sans',sans-serif");</script>
@@ -148,6 +156,12 @@
   .verdict-box.bad{ color:var(--bad)!important; }
   .progress-bar-wrap{ background:rgba(255,255,255,.07); }
 
+  /* ── Skeleton loading + layar PC ── */
+  .skel{ background:linear-gradient(100deg,var(--surface2) 30%,#2c2850 45%,var(--surface2) 60%); background-size:300% 100%; animation:skel 1.25s linear infinite; border-radius:var(--radius); }
+  @keyframes skel{ from{background-position:120% 0} to{background-position:-60% 0} }
+  .skel-row{ height:64px; margin-bottom:10px; }
+  @media (min-width:1100px){ .app-wrap{ max-width:860px; } }
+
 </style>
 </head>
 <body>
@@ -198,7 +212,7 @@
   </div>
 
   <div class="section-title">Riwayat evaluasi</div>
-  <div id="eval-list"><p class="empty">Belum ada evaluasi.</p></div>
+  <div id="eval-list"><div class="skel skel-row"></div><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -228,7 +242,7 @@ async function loadHostData(email) {
   document.getElementById('host-brand').textContent = 'Brand: ' + hostInfo.brand;
 
   const { data, error } = await sb.from('evaluasi_host').select('*').eq('host_email', email).order('created_at', { ascending: true });
-  if (error || !data || !data.length) { document.getElementById('stat-total').textContent = '0'; return; }
+  if (error || !data || !data.length) { document.getElementById('stat-total').textContent = '0'; document.getElementById('eval-list').innerHTML = '<p class="empty">Belum ada evaluasi.</p>'; return; }
 
   const latest = data[data.length - 1];
   const latestAvg = parseFloat(latest.avg);

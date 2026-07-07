@@ -3,6 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d0c17">
+<link rel="icon" href="icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Senja Studio">
 <title>Performa Live — Host</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>window.Chart&&(Chart.defaults.color='#b0aacb',Chart.defaults.borderColor='rgba(255,255,255,.07)',Chart.defaults.font.family="'Plus Jakarta Sans',sans-serif");</script>
@@ -244,6 +252,20 @@
     #hostCards>div{ margin-bottom:0!important; height:100%; }
   }
 
+  /* ── UI: skeleton, avatar host, tabel panjang ── */
+  .skel{ background:linear-gradient(100deg,var(--surface2) 30%,#2c2850 45%,var(--surface2) 60%); background-size:300% 100%; animation:skel 1.25s linear infinite; border-radius:12px; }
+  @keyframes skel{ from{background-position:120% 0} to{background-position:-60% 0} }
+  .skel-chip{ height:38px; width:min(340px,80%); border-radius:999px; margin-bottom:1rem; }
+  .skel-hero{ height:170px; border-radius:16px; margin-bottom:1.3rem; }
+  .skel-card{ height:112px; }
+  .skel-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  @media (min-width:1100px){ .skel-grid{ grid-template-columns:repeat(4,1fr); } }
+  .h-ava{ width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; color:#fff; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.35); font-family:'Space Grotesk','Plus Jakarta Sans',sans-serif; }
+  .tbl-scroll{ max-height:540px; overflow:auto; }
+  .tbl-scroll th{ position:sticky; top:0; z-index:2; }
+  tbody tr:nth-child(even) td{ background:rgba(255,255,255,.025); }
+  tbody tr:hover td{ background:var(--surface2); }
+
 </style>
 </head>
 <body>
@@ -402,6 +424,21 @@ const INT_FIELDS_F=['f_gmv','f_pembeli','f_items','f_viewers','f_impresi','f_kli
 const INT_FIELDS_E=['e_gmv','e_pembeli','e_items','e_viewers','e_impresi','e_klik','e_atc','e_foll','e_likes','e_kom'];
 function destroyCharts(){ Object.values(charts).forEach(c=>{try{c.destroy()}catch(e){}}); charts={}; }
 
+// ── Skeleton loading (pengganti teks "Memuat...") ──
+const SKEL='<div class="skel skel-chip"></div><div class="skel skel-hero"></div><div class="skel-grid"><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div><div class="skel skel-card"></div></div>';
+// ── Angka hero naik dari 0 (hormati prefers-reduced-motion) ──
+function countUp(id, target){
+  const el=document.getElementById(id); if(!el) return;
+  const done=()=>{ el.textContent=rp(target); };
+  if(typeof requestAnimationFrame!=='function' || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || !(target>0)) return done();
+  const t0=performance.now(), D=550;
+  requestAnimationFrame(function f(t){
+    const q=Math.min(1,(t-t0)/D), e=1-Math.pow(1-q,3);
+    el.textContent=rp(target*e);
+    if(q<1) requestAnimationFrame(f); else done();
+  });
+}
+
 // Derived metrics
 function derive(r){
   const gmv=+r.gmv||0, pembeli=+r.pembeli||0, impresi=+r.impresi||0, klik=+r.klik_produk||0,
@@ -531,9 +568,9 @@ function buildHost(){
     `<div class="tab" onclick="switchTab(this,'p-input')">Input Performa</div>`+
     `<div class="tab" onclick="switchTab(this,'p-mine')">Performa Saya</div>`;
   document.getElementById('panels').innerHTML =
-    `<div class="panel active" id="p-home"><div id="homeContent"><p class="empty">Memuat...</p></div></div>`+
+    `<div class="panel active" id="p-home"><div id="homeContent">${SKEL}</div></div>`+
     `<div class="panel" id="p-input">${hostFormHTML()}</div>`+
-    `<div class="panel" id="p-mine"><div id="mineContent"><p class="empty">Memuat...</p></div></div>`;
+    `<div class="panel" id="p-mine"><div id="mineContent">${SKEL}</div></div>`;
   (function(){ const ft=document.getElementById('f_tanggal'); if(ft){ const d=new Date(); const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; ft.value=iso; ft.max=iso; } })();
   attachCalcListeners();
   setupThousandInputs(INT_FIELDS_F);
@@ -598,7 +635,7 @@ function renderHome(){
         <div>
           <div style="font-size:12px;color:rgba(255,255,255,.72);text-transform:uppercase;letter-spacing:.05em">GMV ${isRunning?'Bulan Ini':''} — ${monthName} · ${PLAT_LABEL[PLAT_VIEW]}</div>
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0">
-            <span class="hero-num" style="font-size:34px;font-weight:600;letter-spacing:-.02em">${rp(tot.gmv)}</span>${chip}
+            <span class="hero-num" id="heroNum" style="font-size:34px;font-weight:600;letter-spacing:-.02em">${rp(tot.gmv)}</span>${chip}
           </div>
           <div class="hero-sub">
             <span>${md.length} sesi live${deltaSpan(md.length, pt.n)}</span><span>${closing} sesi closing</span><span>${tot.pembeli} pembeli${deltaSpan(tot.pembeli, pt.pembeli)}</span><span>${tot.viewers.toLocaleString('id-ID')} viewers${deltaSpan(tot.viewers, pt.viewers)}</span>
@@ -635,6 +672,7 @@ function renderHome(){
     ${lastDate?`<div style="text-align:center;font-size:12px;color:var(--text3)">Data terakhir diisi: ${fmtTgl(lastDate)}</div>`:''}
   `;
   drawHomeSpark(md);
+  countUp('heroNum', tot.gmv);
 }
 
 function goTab(panelId, tabIdx){
@@ -1023,10 +1061,10 @@ function buildLeader(){
     `<div class="tab" onclick="switchTab(this,'l-trend')">Tren</div>`+
     (isViewer ? '' : `<div class="tab" onclick="switchTab(this,'l-import')">Import Data</div>`);
   document.getElementById('panels').innerHTML =
-    `<div class="panel active" id="l-home"><div id="leaderHome"><p class="empty">Memuat...</p></div></div>`+
-    `<div class="panel" id="l-dash"><div id="dashContent"><p class="empty">Memuat...</p></div></div>`+
-    `<div class="panel" id="l-compare"><div id="compareContent"><p class="empty">Memuat...</p></div></div>`+
-    `<div class="panel" id="l-trend"><div id="trendContent"><p class="empty">Memuat...</p></div></div>`+
+    `<div class="panel active" id="l-home"><div id="leaderHome">${SKEL}</div></div>`+
+    `<div class="panel" id="l-dash"><div id="dashContent">${SKEL}</div></div>`+
+    `<div class="panel" id="l-compare"><div id="compareContent">${SKEL}</div></div>`+
+    `<div class="panel" id="l-trend"><div id="trendContent">${SKEL}</div></div>`+
     (isViewer ? '' : `<div class="panel" id="l-import">${importHTML()}</div>`);
   if(!isViewer) setupDrop();
   loadDash();
@@ -1079,7 +1117,7 @@ function renderLeaderHome(){
         <div>
           <div style="font-size:12px;color:rgba(255,255,255,.72);text-transform:uppercase;letter-spacing:.05em">Total GMV Tim — ${monthName} · ${PLAT_LABEL[PLAT_VIEW]}</div>
           <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0">
-            <span class="hero-num" style="font-size:34px;font-weight:600;letter-spacing:-.02em">${rp(tot.gmv)}</span>${chip}
+            <span class="hero-num" id="heroNum" style="font-size:34px;font-weight:600;letter-spacing:-.02em">${rp(tot.gmv)}</span>${chip}
           </div>
           <div class="hero-sub">
             <span>${md.length} sesi live${deltaSpan(md.length, pt.n)}</span><span>${activeHosts} host aktif</span><span>${tot.pembeli} pembeli${deltaSpan(tot.pembeli, pt.pembeli)}</span><span>${tot.viewers.toLocaleString('id-ID')} viewers${deltaSpan(tot.viewers, pt.viewers)}</span>
@@ -1131,6 +1169,7 @@ function renderLeaderHome(){
       </div>` : ''}
     </div>`;
   drawHomeSpark(md);
+  countUp('heroNum', tot.gmv);
 }
 
 function goLeaderTab(panelId, tabIdx){
@@ -1218,7 +1257,7 @@ function renderDash(){
   const hosts = curBrand? ALL_HOSTS.filter(h=>h.brands.includes(curBrand)) : ALL_HOSTS;
   const cards = hosts.map(h=>{
     const hd=filtered.filter(r=>r.host_email===h.email);
-    if(!hd.length) return `<div class="tbl-wrap" style="padding:14px 16px;margin-bottom:8px"><b>${h.name}</b> <span class="badge">${curBrand||h.brands.join(' · ')}</span><div style="color:var(--text3);font-size:12px;margin-top:4px">Belum ada data</div></div>`;
+    if(!hd.length) return `<div class="tbl-wrap" style="padding:14px 16px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:10px"><div class="h-ava" style="background:${h.color||'var(--accent)'}">${h.name[0]}</div><div><b>${h.name}</b> <span class="badge">${curBrand||h.brands.join(' · ')}</span><div style="color:var(--text3);font-size:12px;margin-top:2px">Belum ada data</div></div></div></div>`;
     const g=hd.reduce((a,r)=>a+(+r.gmv||0),0);
     const p=hd.reduce((a,r)=>a+(+r.pembeli||0),0);
     const it=hd.reduce((a,r)=>a+(+r.items||0),0);
@@ -1257,7 +1296,7 @@ function renderDash(){
       : ``;
     return `<div class="tbl-wrap" style="padding:14px 16px;margin-bottom:8px;cursor:pointer" onclick="drilldown('${h.email}','${h.name}')">
       <div style="display:flex;justify-content:space-between;align-items:center">
-        <div><b>${h.name}</b> <span class="badge">${curBrand||h.brands.join(' · ')}</span></div>
+        <div style="display:flex;align-items:center;gap:10px"><div class="h-ava" style="background:${h.color||'var(--accent)'}">${h.name[0]}</div><div><b>${h.name}</b> <span class="badge">${curBrand||h.brands.join(' · ')}</span></div></div>
         <div style="text-align:right">
           <div style="font-size:18px;font-weight:600;color:var(--good)">${rp(g)}</div>
           ${momBadge?`<div style="margin-top:2px">${momBadge}</div>`:''}
