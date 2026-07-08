@@ -263,6 +263,7 @@
   .h-ava{ width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; color:#fff; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.35); font-family:'Space Grotesk','Plus Jakarta Sans',sans-serif; }
   .swatch{ width:26px; height:26px; border-radius:50%; border:2px solid transparent; cursor:pointer; margin:0 6px 6px 0; padding:0; }
   .swatch.sel{ border-color:#fff; box-shadow:0 0 0 2px var(--accent); }
+  .pt-btn,.tab,.menu-card,.month-sel,.btn-ghost,.btn-accent{ touch-action:manipulation; }
   .tbl-scroll{ max-height:540px; overflow:auto; }
   .tbl-scroll th{ position:sticky; top:0; z-index:2; }
   tbody tr:nth-child(even) td{ background:rgba(255,255,255,.025); }
@@ -481,6 +482,7 @@ function platToggle(){
 function setPlatView(p){
   if(p===PLAT_VIEW) return;
   PLAT_VIEW=p;
+  window._reflowAt=Date.now();  // cegah ghost-tap nyasar ke menu/tab setelah re-render
   // re-render whatever surfaces are currently in the DOM (kept in sync)
   if(document.getElementById('leaderHome'))   renderLeaderHome();
   if(document.getElementById('dashContent') && !window._drillEmail) renderDash();
@@ -498,6 +500,7 @@ function monthShort(m){ const[y,mo]=m.split('-'); return new Date(y,mo-1).toLoca
 function prevMonthOf(m){ const[y,mo]=m.split('-').map(Number); const d=new Date(y,mo-2,1); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`; }
 function setHomeMonth(v){
   HOME_MONTH=v;
+  window._reflowAt=Date.now();
   if(document.getElementById('leaderHome')) renderLeaderHome();
   if(document.getElementById('homeContent')) renderHome();
 }
@@ -694,13 +697,14 @@ function renderHome(){
 }
 
 function goTab(panelId, tabIdx){
+  if(window._reflowAt && Date.now()-window._reflowAt<350) return;  // tap susulan dari toggle
   const tabs=document.querySelectorAll('#tabs .tab');
   tabs.forEach((t,i)=>t.classList.toggle('active', i===tabIdx));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById(panelId).classList.add('active');
 }
 
-let MINE_BRAND=null;
+let MINE_BRAND=null, MINE_MONTH=null;
 function renderMine(){
   const box=document.getElementById('mineContent');
   if(!myData.length){box.innerHTML='<p class="empty">Belum ada data performa. Isi lewat tab Input Performa.</p>';return;}
@@ -714,7 +718,7 @@ function renderMine(){
       <select onchange="MINE_BRAND=this.value;renderMine()">${me.brands.map(b=>`<option value="${b}" ${MINE_BRAND===b?'selected':''}>${b}</option>`).join('')}</select></div>`;
   }
   box.innerHTML = head + '<div id="mineInner"></div>';
-  renderPerformanceView(document.getElementById('mineInner'), data, me.name, 'mine');
+  renderPerformanceView(document.getElementById('mineInner'), data, me.name, 'mine', MINE_MONTH);
 }
 
 function hostFormHTML(){
@@ -939,13 +943,13 @@ function renderPerformanceView(box, allData, label, ctx, initMonth){
   // collect months present
   const months=[...new Set(allData.filter(r=>r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort().reverse();
   // bulan awal diwarisi dari dashboard (kalau host ini punya data di bulan itu)
-  const effMonth=(initMonth && months.includes(initMonth))? initMonth : '';
+  const effMonth=(initMonth && months.includes(initMonth))? initMonth : '';  // ''/null = Semua bulan
   const monthOpts=`<option value="" ${effMonth===''?'selected':''}>Semua bulan</option>`+months.map(m=>{const[y,mo]=m.split('-');return `<option value="${m}" ${m===effMonth?'selected':''}>${new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`}).join('');
   box.innerHTML = `${platToggle()}<div class="filter-row"><label style="font-size:13px;color:var(--text2)">Periode:</label>
     <select id="mf_${ctx}">${monthOpts}</select></div><div id="body_${ctx}"></div>`;
   // stash data on the select for re-render
   const sel=document.getElementById('mf_'+ctx);
-  sel.onchange=()=>{ if(ctx==='drill') DASH_MONTH=sel.value; renderPerfBody(ctx, allData, label, sel.value); };
+  sel.onchange=()=>{ if(ctx==='drill') DASH_MONTH=sel.value; if(ctx==='mine') MINE_MONTH=sel.value; renderPerfBody(ctx, allData, label, sel.value); };
   renderPerfBody(ctx, allData, label, effMonth);
 }
 
@@ -1194,6 +1198,7 @@ function renderLeaderHome(){
 }
 
 function goLeaderTab(panelId, tabIdx){
+  if(window._reflowAt && Date.now()-window._reflowAt<350) return;  // tap susulan dari toggle
   const tabs=document.querySelectorAll('#tabs .tab');
   tabs.forEach((t,i)=>t.classList.toggle('active', i===tabIdx));
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
