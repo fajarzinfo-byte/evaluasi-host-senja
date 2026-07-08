@@ -712,6 +712,8 @@ function renderMine(){
   const multi=me.brands.length>1;
   if(MINE_BRAND===null || (multi && !me.brands.includes(MINE_BRAND))) MINE_BRAND = multi ? me.brands[0] : '';
   const data = (multi && MINE_BRAND) ? myData.filter(r=>r.brand===MINE_BRAND) : myData;
+  const ms=[...new Set(data.filter(r=>r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort().reverse();
+  if(MINE_MONTH===null || (MINE_MONTH && !ms.includes(MINE_MONTH))) MINE_MONTH = ms[0]||'';
   let head='';
   if(multi){
     head=`<div class="filter-row" style="margin-bottom:10px"><label style="font-size:13px;color:var(--text2)">Brand:</label>
