@@ -322,6 +322,7 @@
     </div>
     <div class="modal-content">
       <div class="form-grid">
+        <div class="fg" id="fg_e_brand"><label>Brand</label><select id="e_brand"></select><div class="hint">Salah pilih brand? Ganti di sini.</div></div>
         <div class="fg"><label>Platform</label><select id="e_platform" onchange="applyEditPlatform()">
           <option value="tiktok">TikTok</option>
           <option value="shopee">Shopee</option>
@@ -1606,6 +1607,14 @@ function openEditSesi(id){
   if(!r){ showToast('Data sesi tidak ditemukan.','error'); return; }
   _editId=id;
   const set=(i,v)=>{ const el=document.getElementById(i); if(el) el.value=(v==null?'':v); };
+  // Brand: opsi = brand yang dipegang host pemilik sesi (fallback: semua brand)
+  const owner = HOST_MAP[r.host_email];
+  let brandOpts = (owner && owner.brands && owner.brands.length) ? [...owner.brands] : [...BRANDS];
+  if(r.brand && !brandOpts.includes(r.brand)) brandOpts.unshift(r.brand); // brand lama tetap muncul walau sudah tidak di-assign
+  const eb=document.getElementById('e_brand');
+  eb.innerHTML = brandOpts.map(b=>`<option value="${b}">${b}</option>`).join('');
+  eb.value = r.brand || brandOpts[0] || '';
+  document.getElementById('fg_e_brand').style.display = brandOpts.length>1 ? '' : 'none';
   document.getElementById('e_platform').value = platOf(r);
   set('e_tanggal', r.tanggal||'');
   document.getElementById('e_sesi').value=String(r.sesi||1);
@@ -1650,6 +1659,7 @@ async function saveEditSesi(){
   }
   const payload={
     tanggal:v('e_tanggal'), sesi:+v('e_sesi'),
+    brand:v('e_brand')||null,
     platform:v('e_platform')||'tiktok',
     gmv:intVal('e_gmv'), pembeli:intVal('e_pembeli'), items:intVal('e_items'),
     viewers:intVal('e_viewers'), impresi:intVal('e_impresi'), klik_produk:intVal('e_klik'), atc:intVal('e_atc'),
