@@ -487,7 +487,7 @@ function setPlatView(p){
   // re-render whatever surfaces are currently in the DOM (kept in sync)
   if(document.getElementById('leaderHome'))   renderLeaderHome();
   if(document.getElementById('dashContent') && !window._drillEmail) renderDash();
-  if(window._drillEmail && document.getElementById('ddView')) drilldown(window._drillEmail, window._drillName);
+  if(window._drillEmail && document.getElementById('ddView')) drilldown(window._drillEmail, window._drillName, false);
   if(document.getElementById('compareContent')) renderCompare();
   if(document.getElementById('trendContent'))  renderTrend();
   if(document.getElementById('homeContent'))   renderHome();
@@ -1592,9 +1592,9 @@ function renderTrend(){
   });
 }
 
-function drilldown(email,name){
+function drilldown(email,name,focus=true){
   window._drillEmail=email; window._drillName=name;
-  switchTabById('l-dash');
+  if(focus) switchTabById('l-dash');   // pindah tab hanya saat user klik host, bukan saat re-render (mis. toggle platform dari tab lain)
   const box=document.getElementById('dashContent');
   const hd=allPerf.filter(r=>r.host_email===email && (!DASH_BRAND||r.brand===DASH_BRAND)).sort((a,b)=>(a.tanggal+a.sesi).localeCompare(b.tanggal+b.sesi));
   box.innerHTML=`<button class="btn-ghost" style="margin-bottom:14px" onclick="renderDash()">← Kembali ke dashboard</button>
@@ -1697,7 +1697,7 @@ async function afterPerfChange(){
   } else {
     const {data}=await fetchAllPerf();
     allPerf=data||[];
-    if(window._drillEmail){ drilldown(window._drillEmail, window._drillName); }
+    if(window._drillEmail){ drilldown(window._drillEmail, window._drillName, false); }
     else { renderDash(); }
   }
 }
