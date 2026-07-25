@@ -725,16 +725,17 @@ async function loadConfig(){
   return true;
 }
 
-// Brand otomatis dari host terpilih. Kalau host pegang >1 brand, field brand muncul untuk dipilih.
+// Brand terisi otomatis dari host terpilih (evaluasi menilai host, bukan brand — field tidak pernah ditampilkan).
+// Untuk host multi-brand, otomatis pakai brand pertamanya sebagai penanda di rekap.
 function applyHostBrand(selectedBrand){
   const host=document.getElementById('host-name').value;
   const bSel=document.getElementById('brand');
   const fld=document.getElementById('field-brand');
+  fld.style.display='none';
   const brands=HOST_BRANDS[host]||[];
-  if(!host || !brands.length){ bSel.innerHTML='<option value=""></option>'; bSel.value=''; fld.style.display='none'; return; }
+  if(!host || !brands.length){ bSel.innerHTML='<option value=""></option>'; bSel.value=''; return; }
   bSel.innerHTML=brands.map(b=>`<option value="${b}">${b}</option>`).join('');
   bSel.value=(selectedBrand && brands.includes(selectedBrand)) ? selectedBrand : brands[0];
-  fld.style.display = brands.length>1 ? '' : 'none';
 }
 
 function buildUI() {
