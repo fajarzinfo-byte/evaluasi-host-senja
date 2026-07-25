@@ -523,15 +523,15 @@
   <!-- Meta -->
   <div class="meta-grid">
     <div class="field">
-      <label>Brand</label>
-      <select id="brand" onchange="updateHostOptions()" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);outline:none;">
-        <option value="">Pilih brand</option>
+      <label>Nama host</label>
+      <select id="host-name" onchange="applyHostBrand()" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);outline:none;">
+        <option value="">Pilih host</option>
       </select>
     </div>
-    <div class="field">
-      <label>Nama host</label>
-      <select id="host-name" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);outline:none;">
-        <option value="">Pilih brand dulu</option>
+    <div class="field" id="field-brand" style="display:none">
+      <label>Brand</label>
+      <select id="brand" style="width:100%;padding:8px 12px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--surface);font-family:'Plus Jakarta Sans',sans-serif;font-size:13px;color:var(--text);outline:none;">
+        <option value=""></option>
       </select>
     </div>
     <div class="field">
@@ -586,10 +586,14 @@
 
   <!-- Buttons -->
   <div class="btn-row">
-    <button class="btn btn-primary" onclick="saveSession()">Simpan sesi ini</button>
+    <button class="btn btn-primary" onclick="saveSession()">Simpan & kirim email</button>
+    <button class="btn" onclick="saveDraft()" style="border-color:var(--accent);color:var(--accent)">📝 Jadikan draft</button>
     <button class="btn" onclick="printPage()">Cetak / export PDF</button>
     <button class="btn btn-danger" onclick="resetForm()">Reset form</button>
   </div>
+
+  <!-- Drafts (lokal, belum dikirim) -->
+  <div class="history-section" id="drafts-panel" style="display:none"></div>
 
   <!-- History -->
   <div class="history-section">
@@ -697,38 +701,40 @@ let sessions = [];
 
 // ── Config tim dinamis dari tabel app_config (dikelola lewat tab "Tim" di Beranda) ──
 let HOST_MAP = {};      // brand -> [nama host aktif]
+let HOST_BRANDS = {};   // nama host -> [brands] (untuk auto-isi brand dari host)
 let HOST_EMAILS = {};   // nama host -> email
 let BRANDS = [];
 async function loadConfig(){
   const {data,error}=await sb.from('app_config').select('hosts,brands').eq('id',1).single();
   if(error||!data){ alert('Config tim belum ada di database.\nJalankan SQL setup app_config (Panduan bagian 3.7) lalu refresh.'); return false; }
-  BRANDS=data.brands||[]; HOST_MAP={}; HOST_EMAILS={};
+  BRANDS=data.brands||[]; HOST_MAP={}; HOST_BRANDS={}; HOST_EMAILS={};
   BRANDS.forEach(b=>HOST_MAP[b]=[]);
   Object.entries(data.hosts||{}).forEach(([email,v])=>{
     HOST_EMAILS[v.name]=email;
     if(v.active===false) return;                      // host nonaktif tidak muncul di form
+    HOST_BRANDS[v.name]=(v.brands||[]).filter(b=>BRANDS.includes(b));
     (v.brands||[]).forEach(b=>{ if(HOST_MAP[b]) HOST_MAP[b].push(v.name); });
   });
-  // isi dropdown brand (form & filter riwayat) dari config
+  // dropdown host: langsung semua host aktif (brand otomatis mengikuti host)
+  const hSel=document.getElementById('host-name');
+  if(hSel) hSel.innerHTML='<option value="">Pilih host</option>'+Object.keys(HOST_BRANDS).sort().map(h=>`<option value="${h}">${h}</option>`).join('');
+  // filter riwayat tetap per brand
   const opts=BRANDS.map(b=>`<option value="${b}">${b}</option>`).join('');
-  const bSel=document.getElementById('brand');
-  if(bSel) bSel.innerHTML='<option value="">Pilih brand</option>'+opts;
   const bFil=document.getElementById('brand-filter');
   if(bFil) bFil.innerHTML='<option value="">Semua brand</option>'+opts;
   return true;
 }
 
-function updateHostOptions(selectedHost) {
-  const brand = document.getElementById('brand').value;
-  const hostSelect = document.getElementById('host-name');
-  hostSelect.innerHTML = '';
-  if (!brand) {
-    hostSelect.innerHTML = '<option value="">Pilih brand dulu</option>';
-    return;
-  }
-  const hosts = HOST_MAP[brand] || [];
-  hostSelect.innerHTML = '<option value="">Pilih host</option>' +
-    hosts.map(h => `<option value="${h}" ${h === selectedHost ? 'selected' : ''}>${h}</option>`).join('');
+// Brand otomatis dari host terpilih. Kalau host pegang >1 brand, field brand muncul untuk dipilih.
+function applyHostBrand(selectedBrand){
+  const host=document.getElementById('host-name').value;
+  const bSel=document.getElementById('brand');
+  const fld=document.getElementById('field-brand');
+  const brands=HOST_BRANDS[host]||[];
+  if(!host || !brands.length){ bSel.innerHTML='<option value=""></option>'; bSel.value=''; fld.style.display='none'; return; }
+  bSel.innerHTML=brands.map(b=>`<option value="${b}">${b}</option>`).join('');
+  bSel.value=(selectedBrand && brands.includes(selectedBrand)) ? selectedBrand : brands[0];
+  fld.style.display = brands.length>1 ? '' : 'none';
 }
 
 function buildUI() {
@@ -837,18 +843,19 @@ function updateVerdict(avg, filledCount, totalItems) {
   }
 }
 
-async function saveSession() {
+// Kumpulkan & validasi isian form jadi payload (dipakai simpan langsung maupun draft)
+function buildPayload() {
   const host = document.getElementById('host-name').value.trim();
   const sesi = document.getElementById('sesi').value.trim();
   const tanggal = document.getElementById('tanggal').value;
   const brand = document.getElementById('brand').value;
   const commitment = document.getElementById('commitment').value.trim();
 
-  if (!host) { alert('Pilih nama host dulu ya.'); return; }
-  if (!brand) { alert('Pilih brand dulu ya.'); return; }
+  if (!host) { alert('Pilih nama host dulu ya.'); return null; }
+  if (!brand) { alert('Brand belum terdeteksi — pilih brand dulu ya.'); return null; }
 
   const allVals = Object.values(scores).filter(v => v > 0);
-  if (!allVals.length) { alert('Isi penilaian dulu sebelum menyimpan.'); return; }
+  if (!allVals.length) { alert('Isi penilaian dulu sebelum menyimpan.'); return null; }
 
   const total = allVals.reduce((a,b)=>a+b,0);
   const max = Object.keys(scores).length * 5;
@@ -861,11 +868,9 @@ async function saveSession() {
     notes: document.getElementById(`notes_${sec.id}`).value.trim(),
   }));
 
-  // email host diambil dari config global (HOST_EMAILS)
-
   const target = document.getElementById('target').value.trim();
 
-  const payload = {
+  return {
     host, brand,
     host_email: HOST_EMAILS[host] || null,
     evaluasi_ke: sesi || null,
@@ -877,37 +882,149 @@ async function saveSession() {
     filled_count: allVals.length,
     sections: sectionData,
   };
+}
+
+// Kirim notifikasi email evaluasi ke host (dipakai simpan langsung & publish draft)
+async function sendEvalEmail(p) {
+  const hostEmail = HOST_EMAILS[p.host];
+  if (!hostEmail) return false;
+  const tgl = p.tanggal ? new Date(p.tanggal + 'T00:00:00').toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'}) : '-';
+  const verdict = p.avg >= 4 ? 'Sangat Baik' : p.avg >= 3 ? 'Cukup Baik' : 'Perlu Improvement';
+  await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
+    to_email: hostEmail,
+    host_name: p.host,
+    tanggal: tgl,
+    skor: p.avg.toFixed(1) + ' / 5',
+    hasil: verdict,
+    target: p.target || '-',
+    host_link: HOST_LINK,
+  });
+  return true;
+}
+
+async function saveSession() {
+  const payload = buildPayload();
+  if (!payload) return;
 
   showToast('Menyimpan...', 'info');
   const { data, error } = await sb.from('evaluasi_host').insert([payload]).select();
   if (error) { showToast('Gagal menyimpan: ' + error.message, 'error'); return; }
 
-  showToast(`Evaluasi ${host} berhasil disimpan!`, 'success');
+  showToast(`Evaluasi ${payload.host} berhasil disimpan!`, 'success');
 
-  // Send email notification to host
-  const hostEmail = HOST_EMAILS[host];
-  if (hostEmail) {
-    const tgl = tanggal ? new Date(tanggal + 'T00:00:00').toLocaleDateString('id-ID', {day:'numeric',month:'long',year:'numeric'}) : '-';
-    const verdict = avg >= 4 ? 'Sangat Baik' : avg >= 3 ? 'Cukup Baik' : 'Perlu Improvement';
-    const targetText = target ? `<p style="margin:12px 0 4px;font-weight:600">Target dari leader:</p><p style="background:#fffbeb;padding:10px;border-radius:6px;border-left:3px solid #f59e0b">${target}</p>` : '';
-    try {
-      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-        to_email: hostEmail,
-        host_name: host,
-        tanggal: tgl,
-        skor: avg.toFixed(1) + ' / 5',
-        hasil: verdict,
-        target: target || '-',
-        host_link: HOST_LINK,
-      });
-      showToast('Notifikasi email terkirim ke ' + host, 'success');
-    } catch(e) {
-      console.error('Email error:', e);
-    }
-  }
+  try {
+    if (await sendEvalEmail(payload)) showToast('Notifikasi email terkirim ke ' + payload.host, 'success');
+  } catch(e) { console.error('Email error:', e); }
+
+  // kalau berasal dari draft, hapus draftnya biar tidak dobel publish
+  if (_editingDraftId) { removeDraft(_editingDraftId); _editingDraftId = null; }
 
   await fetchSessions();
   document.getElementById('target').value = '';
+}
+
+// ── Draft evaluasi (tersimpan lokal di perangkat ini; belum masuk database & belum kirim email) ──
+const DRAFT_KEY = 'senja_eval_drafts';
+let _editingDraftId = null;
+
+function getDrafts(){ try { return JSON.parse(localStorage.getItem(DRAFT_KEY)) || []; } catch(e){ return []; } }
+function setDrafts(d){ localStorage.setItem(DRAFT_KEY, JSON.stringify(d)); renderDrafts(); }
+function removeDraft(id){ setDrafts(getDrafts().filter(x => x.draft_id !== id)); }
+
+function saveDraft() {
+  const payload = buildPayload();
+  if (!payload) return;
+  const drafts = getDrafts();
+  if (_editingDraftId) {
+    const i = drafts.findIndex(x => x.draft_id === _editingDraftId);
+    if (i >= 0) { drafts[i] = { ...payload, draft_id: _editingDraftId }; }
+    else drafts.push({ ...payload, draft_id: _editingDraftId });
+  } else {
+    drafts.push({ ...payload, draft_id: Date.now() });
+  }
+  setDrafts(drafts);
+  _editingDraftId = null;
+  showToast(`Draft evaluasi ${payload.host} tersimpan. Belum dikirim — publish nanti serentak.`, 'success');
+  document.getElementById('target').value = '';
+}
+
+function loadDraft(id) {
+  const s = getDrafts().find(x => x.draft_id === id);
+  if (!s) return;
+  _editingDraftId = id;
+  document.getElementById('host-name').value = s.host || '';
+  applyHostBrand(s.brand);
+  document.getElementById('sesi').value = s.evaluasi_ke || '';
+  document.getElementById('tanggal').value = s.tanggal || '';
+  document.getElementById('commitment').value = s.commitment || '';
+  document.getElementById('target').value = s.target || '';
+  Object.keys(scores).forEach(k => scores[k] = 0);
+  document.querySelectorAll('.star').forEach(st => st.classList.remove('on'));
+  s.sections.forEach(sec => {
+    sec.scores.forEach((val, i) => {
+      const key = `${sec.id}_${i}`;
+      scores[key] = val || 0;
+      const starsEl = document.getElementById(`stars_${key}`);
+      if (starsEl) starsEl.querySelectorAll('.star').forEach((star, si) => star.classList.toggle('on', si < (val||0)));
+    });
+    const notesEl = document.getElementById(`notes_${sec.id}`);
+    if (notesEl) notesEl.value = sec.notes || '';
+    updateSectionAvg(sec.id);
+  });
+  updateSummary();
+  window.scrollTo({top: 0, behavior: 'smooth'});
+  showToast('Draft dimuat — simpan lagi sebagai draft atau langsung publish.', 'info');
+}
+
+function deleteDraft(id) {
+  if (!confirm('Hapus draft ini?')) return;
+  if (_editingDraftId === id) _editingDraftId = null;
+  removeDraft(id);
+  showToast('Draft dihapus.', 'success');
+}
+
+async function publishAllDrafts() {
+  const drafts = getDrafts();
+  if (!drafts.length) return;
+  if (!confirm(`Publish ${drafts.length} draft sekaligus?\nSemua akan disimpan ke database dan email notifikasi dikirim ke tiap host.`)) return;
+
+  let ok = 0, fail = 0;
+  for (const d of drafts) {
+    const { draft_id, ...payload } = d;
+    showToast(`Publish ${ok+fail+1}/${drafts.length}: ${payload.host}...`, 'info');
+    const { error } = await sb.from('evaluasi_host').insert([payload]);
+    if (error) { fail++; console.error('Publish gagal:', payload.host, error.message); continue; }
+    try { await sendEvalEmail(payload); } catch(e) { console.error('Email error:', payload.host, e); }
+    removeDraft(draft_id);
+    ok++;
+  }
+  showToast(fail ? `${ok} draft terpublish, ${fail} gagal (masih tersimpan sebagai draft).` : `Semua ${ok} draft berhasil dipublish & email terkirim! 🎉`, fail ? 'error' : 'success');
+  await fetchSessions();
+}
+
+function renderDrafts() {
+  const panel = document.getElementById('drafts-panel');
+  if (!panel) return;
+  const drafts = getDrafts();
+  if (!drafts.length) { panel.style.display = 'none'; panel.innerHTML = ''; return; }
+  panel.style.display = '';
+  panel.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+      <div class="section-title" style="margin:0">📝 Draft evaluasi (${drafts.length}) <span style="font-weight:400;font-size:12px;color:var(--text2)">— tersimpan di perangkat ini, belum dikirim</span></div>
+      <button class="btn btn-primary" onclick="publishAllDrafts()">🚀 Publish semua (${drafts.length})</button>
+    </div>
+    ${drafts.map(d => `
+      <div class="history-item" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div>
+          <div class="history-name">${d.host} <span style="font-weight:600;color:var(--accent)">${d.avg}</span></div>
+          <div class="history-meta">${d.brand} &nbsp;·&nbsp; ${d.tanggal ? new Date(d.tanggal+'T00:00:00').toLocaleDateString('id-ID',{day:'numeric',month:'short'}) : 'tanpa tanggal'} &nbsp;·&nbsp; ${d.filled_count}/${Object.keys(scores).length} poin</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn" onclick="loadDraft(${d.draft_id})">✏️ Edit</button>
+          <button class="btn" onclick="deleteDraft(${d.draft_id})" style="color:#c0392b">🗑️</button>
+        </div>
+      </div>`).join('')}
+  `;
 }
 
 async function fetchSessions() {
@@ -952,8 +1069,8 @@ function renderHistory() {
 function loadSession(id) {
   const s = sessions.find(x => x.id === id);
   if (!s) return;
-  document.getElementById('brand').value = s.brand || '';
-  updateHostOptions(s.host);
+  document.getElementById('host-name').value = s.host || '';
+  applyHostBrand(s.brand);
   document.getElementById('sesi').value = s.evaluasi_ke || '';
   document.getElementById('tanggal').value = s.tanggal || '';
   document.getElementById('commitment').value = s.commitment || '';
@@ -986,8 +1103,8 @@ function resetForm() {
   document.getElementById('host-name').value = '';
   document.getElementById('sesi').value = '';
   document.getElementById('tanggal').value = '';
-  document.getElementById('brand').value = '';
-  updateHostOptions();
+  applyHostBrand();
+  _editingDraftId = null;
   document.getElementById('target').value = '';
   document.getElementById('commitment').value = '';
   Object.keys(scores).forEach(k => scores[k] = 0);
@@ -1056,6 +1173,7 @@ async function initApp() {
     document.getElementById('main-app').style.display = 'block';
     if(!(await loadConfig())) return;
     buildUI();
+    renderDrafts();
     fetchSessions();
   } else {
     // Login terpusat di Beranda — arahkan ke sana
