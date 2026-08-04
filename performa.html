@@ -2226,15 +2226,23 @@ function renderLibur(){
     </div>`;
   }).join('');
 
-  // ── Daftar libur bulan terpilih ──
+  // ── Daftar libur bulan terpilih (dikelompokkan per host, tanggal urut) ──
   const liburList=allLibur.filter(l=>(l.tanggal||'').startsWith(LIBUR_MONTH));
-  const listHTML = liburList.length ? liburList.map(l=>`
-    <div class="tbl-wrap" style="padding:9px 14px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:10px">
-      <div><span style="font-weight:700">${hostNameByEmail(l.host_email)}</span>
-        <span style="color:var(--text2)"> · ${fmtTgl(l.tanggal)}</span>
-        ${l.keterangan?`<span style="color:var(--text3);font-size:12px"> · ${l.keterangan}</span>`:''}</div>
-      ${isLeader?`<button class="row-btn del" onclick="deleteLibur('${l.id}')" title="Hapus tanda libur">🗑️</button>`:''}
-    </div>`).join('') : '<p class="empty" style="padding:8px 0">Tidak ada libur di bulan ini.</p>';
+  const byHost={};
+  liburList.forEach(l=>{ (byHost[l.host_email]=byHost[l.host_email]||[]).push(l); });
+  const listHTML = liburList.length ? Object.keys(byHost)
+    .sort((a,b)=>hostNameByEmail(a).localeCompare(hostNameByEmail(b)))
+    .map(email=>{
+      const items=byHost[email].sort((a,b)=>(a.tanggal||'').localeCompare(b.tanggal||''));
+      return `<div class="tbl-wrap" style="padding:10px 14px;margin-bottom:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+          <div style="font-weight:700">${hostNameByEmail(email)} <span style="font-weight:400;font-size:12px;color:var(--text3)">· ${items.length} hari libur</span></div>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+          ${items.map(l=>`<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--text3);border-radius:20px;font-size:12px;color:var(--text2)" title="${l.keterangan||''}">🏖️ ${fmtTglHari(l.tanggal)}${l.keterangan?` · ${l.keterangan}`:''}${isLeader?`<button class="row-btn del" onclick="deleteLibur('${l.id}')" title="Hapus tanda libur" style="padding:0 2px">✕</button>`:''}</span>`).join('')}
+        </div>
+      </div>`;
+    }).join('') : '<p class="empty" style="padding:8px 0">Tidak ada libur di bulan ini.</p>';
 
   box.innerHTML = `${form}
     <div class="filter-row" style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)">Bulan:</label>
@@ -2294,6 +2302,7 @@ function fillDateDropdown(id){
   sel.innerHTML=html;
 }
 function fmtTgl(t){ if(!t)return'—'; const d=new Date(t+'T00:00:00'); return d.toLocaleDateString('id-ID',{day:'numeric',month:'short'}); }
+function fmtTglHari(t){ if(!t)return'—'; const d=new Date(t+'T00:00:00'); return d.toLocaleDateString('id-ID',{weekday:'short',day:'numeric',month:'short'}); }
 
 init();
 </script>
