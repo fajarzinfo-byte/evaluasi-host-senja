@@ -618,8 +618,15 @@ async function fetchAllPerf(filterFn){
 }
 
 let myData = [];
+// ── Libur host: tabel host_libur (leader menandai, dipakai riwayat sesi & kelengkapan data) ──
+let allLibur = [];
+async function fetchLibur(){
+  const {data,error}=await sb.from('host_libur').select('*').order('tanggal',{ascending:false});
+  allLibur=(error||!data)?[]:data;
+  if(error) console.warn('Tabel host_libur belum ada? Jalankan SQL setup-nya dulu.', error.message);
+}
 async function loadHostData(){
-  const {data,error}=await fetchAllPerf(q=>q.eq('host_email',ME));
+  const [{data,error}] = await Promise.all([fetchAllPerf(q=>q.eq('host_email',ME)), fetchLibur()]);
   myData = (error||!data)? [] : data;
   renderHome();
   renderMine();
@@ -959,7 +966,15 @@ function renderPerformanceView(box, allData, label, ctx, initMonth){
 function renderPerfBody(ctx, allData, label, month){
   const data = platFilter(month? allData.filter(r=>r.tanggal&&r.tanggal.startsWith(month)) : allData);
   const box=document.getElementById('body_'+ctx);
-  if(!data.length){ box.innerHTML='<p class="empty">Tidak ada data di periode / platform ini.</p>'; return; }
+  // libur host ini (drilldown = host yang dibuka, mine = host login) — muncul di riwayat sesi
+  const luEmail = ctx==='drill' ? window._drillEmail : (ctx==='mine' ? ME : null);
+  const libur = luEmail ? allLibur.filter(l=>l.host_email===luEmail && l.tanggal && (!month || l.tanggal.startsWith(month))) : [];
+  if(!data.length){
+    box.innerHTML = libur.length
+      ? '<p class="empty">Tidak ada data sesi di periode / platform ini.</p>'+[...libur].sort((a,b)=>a.tanggal<b.tanggal?1:-1).map(l=>`<div class="tbl-wrap" style="padding:9px 14px;margin-bottom:6px;color:var(--text3)">🏖️ ${fmtTgl(l.tanggal)} (libur)${l.keterangan?' · '+l.keterangan:''}</div>`).join('')
+      : '<p class="empty">Tidak ada data di periode / platform ini.</p>';
+    return;
+  }
   const tot = data.reduce((a,r)=>{a.gmv+=+r.gmv||0;a.pembeli+=+r.pembeli||0;a.items+=+r.items||0;a.viewers+=+r.viewers||0;a.impresi+=+r.impresi||0;a.klik+=+r.klik_produk||0;a.atc+=+r.atc||0;a.likes+=+r.likes||0;a.kom+=+r.komentar||0;a.foll+=+r.followers_baru||0;return a;},{gmv:0,pembeli:0,items:0,viewers:0,impresi:0,klik:0,atc:0,likes:0,kom:0,foll:0});
   const dTot = derive({gmv:tot.gmv,pembeli:tot.pembeli,impresi:tot.impresi,klik_produk:tot.klik,viewers:tot.viewers,likes:tot.likes,komentar:tot.kom,durasi_menit:0});
   const closing = data.filter(r=>(+r.gmv||0)>0).length;
@@ -1047,7 +1062,11 @@ function renderPerfBody(ctx, allData, label, month){
     <div class="section-title">Riwayat Sesi</div>
     <div class="tbl-wrap"><div class="tbl-scroll"><table>
       <thead><tr><th>Aksi</th><th>Tgl</th><th>Sesi</th><th>Plat</th><th class="num">GMV</th><th class="num">Pembeli</th><th class="num">Items</th><th class="num">Viewers</th><th class="num">Impresi</th><th class="num">Klik</th><th class="num">AvgDur</th><th class="num">Follow</th><th class="num">Likes</th><th class="num">Komen</th><th class="num">CTR</th><th class="num">CTOR</th><th class="num">GPM</th><th class="num">Eng</th><th class="num">SS</th></tr></thead>
-      <tbody>${[...data].reverse().map(r=>{const d=derive(r);const sh=platOf(r)==='shopee';return `<tr>
+      <tbody>${[...data.map(r=>({...r,_libur:false})), ...libur.map(l=>({...l,_libur:true}))].sort((a,b)=>{const ta=a.tanggal||'',tb=b.tanggal||'';if(ta!==tb)return ta<tb?1:-1;return (+(b.sesi||0))-(+(a.sesi||0));}).map(r=>{if(r._libur){return `<tr style="opacity:.7">
+        <td style="white-space:nowrap">${ROLE==='leader'?`<button class="row-btn del" onclick="deleteLibur('${r.id}')" title="Hapus tanda libur">🗑️</button>`:''}</td>
+        <td style="white-space:nowrap">${fmtTgl(r.tanggal)} <span style="color:var(--text3)">(libur)</span></td>
+        <td colspan="17" style="color:var(--text3)">—${r.keterangan?' '+r.keterangan+' ':''}</td>
+      </tr>`;}const d=derive(r);const sh=platOf(r)==='shopee';return `<tr>
         <td style="white-space:nowrap">${ROLE!=='viewer'?`<button class="row-btn" onclick="openEditSesi('${r.id}')" title="Edit sesi">✏️</button>`:''}${ROLE==='leader'?`<button class="row-btn del" onclick="deleteSesi('${r.id}')" title="Hapus sesi">🗑️</button>`:''}</td>
         <td>${fmtTgl(r.tanggal)}</td><td>S${r.sesi}</td>
         <td title="${sh?'Shopee':'TikTok'}">${sh?'🛒':'🎵'}</td>
@@ -1087,6 +1106,7 @@ function buildLeader(){
     `<div class="tab" onclick="switchTab(this,'l-dash')">Dashboard Performa</div>`+
     `<div class="tab" onclick="switchTab(this,'l-compare')">Banding</div>`+
     `<div class="tab" onclick="switchTab(this,'l-trend')">Tren</div>`+
+    `<div class="tab" onclick="switchTab(this,'l-libur')">Libur & Data</div>`+
     (isViewer ? '' : `<div class="tab" onclick="switchTab(this,'l-import')">Import Data</div>`)+
     (isViewer ? '' : `<div class="tab" onclick="switchTab(this,'l-team')">Tim</div>`);
   document.getElementById('panels').innerHTML =
@@ -1094,6 +1114,7 @@ function buildLeader(){
     `<div class="panel" id="l-dash"><div id="dashContent">${SKEL}</div></div>`+
     `<div class="panel" id="l-compare"><div id="compareContent">${SKEL}</div></div>`+
     `<div class="panel" id="l-trend"><div id="trendContent">${SKEL}</div></div>`+
+    `<div class="panel" id="l-libur"><div id="liburContent">${SKEL}</div></div>`+
     (isViewer ? '' : `<div class="panel" id="l-import">${importHTML()}</div>`)+
     (isViewer ? '' : `<div class="panel" id="l-team"><div id="teamContent">${SKEL}</div></div>`);
   if(!isViewer) setupDrop();
@@ -1102,13 +1123,14 @@ function buildLeader(){
 }
 
 async function loadDash(){
-  const {data,error}=await fetchAllPerf();
+  const [{data,error}] = await Promise.all([fetchAllPerf(), fetchLibur()]);
   if(error){document.getElementById('dashContent').innerHTML='<p class="empty">Gagal memuat.</p>';return;}
   allPerf=data||[];
   renderDash();
   renderLeaderHome();
   renderCompare();
   renderTrend();
+  renderLibur();
 }
 
 function renderLeaderHome(){
@@ -2151,6 +2173,100 @@ async function confirmImport(){
   document.getElementById('impPreview').innerHTML='';
   pendingRows=[];
   loadDash();
+}
+
+// ── Libur & Kelengkapan Data ──
+let LIBUR_MONTH=null;
+function hostNameByEmail(e){ const h=ALL_HOSTS.find(x=>x.email===e); return h?h.name:e; }
+function renderLibur(){
+  const box=document.getElementById('liburContent'); if(!box) return;
+  const isLeader=ROLE==='leader';
+  const thisMonth=new Date().toISOString().slice(0,7);
+  if(LIBUR_MONTH===null) LIBUR_MONTH=thisMonth;
+  const hosts=[...ALL_HOSTS.filter(h=>h.active)].sort((a,b)=>a.name.localeCompare(b.name));
+  const besok=new Date(Date.now()+864e5).toISOString().slice(0,10);
+
+  const form = isLeader ? `
+    <div class="tbl-wrap" style="padding:14px 16px;margin-bottom:14px">
+      <div class="section-title" style="margin-top:0">🏖️ Tandai host libur</div>
+      <div class="filter-row" style="flex-wrap:wrap;gap:8px">
+        <select id="lb_host">${hosts.map(h=>`<option value="${h.email}">${h.name}</option>`).join('')}</select>
+        <input type="date" id="lb_tgl" value="${besok}" />
+        <input type="text" id="lb_ket" placeholder="Keterangan (opsional)" style="min-width:160px" />
+        <button class="btn-accent" onclick="addLibur()">Tandai libur</button>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-top:8px">Tanggal libur muncul di riwayat sesi host & dihitung "beres" di kelengkapan data.</div>
+    </div>` : '';
+
+  // bulan tersedia: gabungan bulan performa + bulan libur + bulan ini
+  const months=[...new Set([thisMonth, ...allPerf.map(r=>(r.tanggal||'').slice(0,7)), ...allLibur.map(l=>(l.tanggal||'').slice(0,7))])].filter(Boolean).sort().reverse();
+  const monthOpts=months.map(m=>{const[y,mo]=m.split('-');return `<option value="${m}" ${m===LIBUR_MONTH?'selected':''}>${new Date(y,mo-1).toLocaleDateString('id-ID',{month:'long',year:'numeric'})}</option>`}).join('');
+
+  // ── Kelengkapan data bulan terpilih ──
+  const [ly,lm]=LIBUR_MONTH.split('-').map(Number);
+  const daysIn=new Date(ly,lm,0).getDate();
+  const isCur=LIBUR_MONTH===thisMonth;
+  const lastDay=isCur? new Date().getDate() : daysIn;   // bulan berjalan: cek sampai hari ini saja
+  const cards=hosts.map(h=>{
+    const missing=[], liburDays=[];
+    for(let d=1;d<=lastDay;d++){
+      const tgl=`${LIBUR_MONTH}-${String(d).padStart(2,'0')}`;
+      const filled=allPerf.some(r=>r.host_email===h.email && r.tanggal===tgl);
+      if(filled) continue;
+      if(allLibur.some(l=>l.host_email===h.email && l.tanggal===tgl)) liburDays.push(d);
+      else missing.push(d);
+    }
+    const status = missing.length
+      ? `<span style="color:#f0a868;font-weight:700">⚠️ ${missing.length} tanggal belum diisi:</span> <span style="color:var(--text2)">${missing.join(', ')}</span>`
+      : `<span style="color:#4ade80;font-weight:700">✅ Lengkap</span>`;
+    const lib = liburDays.length? `<span style="font-size:11px;color:var(--text3)"> · 🏖️ libur: ${liburDays.join(', ')}</span>` : '';
+    return `<div class="tbl-wrap" style="padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+      <div style="font-weight:700">${h.name}</div>
+      <div style="font-size:12.5px;text-align:right">${status}${lib}</div>
+    </div>`;
+  }).join('');
+
+  // ── Daftar libur bulan terpilih ──
+  const liburList=allLibur.filter(l=>(l.tanggal||'').startsWith(LIBUR_MONTH));
+  const listHTML = liburList.length ? liburList.map(l=>`
+    <div class="tbl-wrap" style="padding:9px 14px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+      <div><span style="font-weight:700">${hostNameByEmail(l.host_email)}</span>
+        <span style="color:var(--text2)"> · ${fmtTgl(l.tanggal)}</span>
+        ${l.keterangan?`<span style="color:var(--text3);font-size:12px"> · ${l.keterangan}</span>`:''}</div>
+      ${isLeader?`<button class="row-btn del" onclick="deleteLibur('${l.id}')" title="Hapus tanda libur">🗑️</button>`:''}
+    </div>`).join('') : '<p class="empty" style="padding:8px 0">Tidak ada libur di bulan ini.</p>';
+
+  box.innerHTML = `${form}
+    <div class="filter-row" style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)">Bulan:</label>
+      <select onchange="LIBUR_MONTH=this.value;renderLibur()">${monthOpts}</select></div>
+    <div class="section-title">📋 Kelengkapan data ${isCur?'(sampai hari ini)':''}</div>
+    ${cards || '<p class="empty">Belum ada host aktif.</p>'}
+    <div class="section-title" style="margin-top:18px">🏖️ Daftar libur</div>
+    ${listHTML}`;
+}
+async function addLibur(){
+  const email=document.getElementById('lb_host').value;
+  const tgl=document.getElementById('lb_tgl').value;
+  const ket=document.getElementById('lb_ket').value.trim();
+  if(!email||!tgl){ showToast('Pilih host dan tanggal dulu.','error'); return; }
+  if(allPerf.some(r=>r.host_email===email && r.tanggal===tgl)){ showToast('Host ini sudah punya data sesi di tanggal itu.','error'); return; }
+  const {error}=await sb.from('host_libur').insert([{host_email:email,tanggal:tgl,keterangan:ket||null}]);
+  if(error){ showToast(error.code==='23505'?'Tanggal itu sudah ditandai libur untuk host ini.':'Gagal: '+error.message,'error'); return; }
+  showToast(`${hostNameByEmail(email)} ditandai libur ${fmtTgl(tgl)}.`,'success');
+  document.getElementById('lb_ket').value='';
+  await fetchLibur(); refreshLiburViews();
+}
+async function deleteLibur(id){
+  if(!confirm('Hapus tanda libur ini?')) return;
+  const {error}=await sb.from('host_libur').delete().eq('id',id);
+  if(error){ showToast('Gagal: '+error.message,'error'); return; }
+  showToast('Tanda libur dihapus.','success');
+  await fetchLibur(); refreshLiburViews();
+}
+function refreshLiburViews(){
+  renderLibur();
+  if(window._drillEmail && document.getElementById('ddView')) drilldown(window._drillEmail, window._drillName, false);
+  if(document.getElementById('mineContent')) renderMine();
 }
 
 // ── Tabs / utils ──
