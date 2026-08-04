@@ -654,6 +654,28 @@ function renderHome(){
   // last filled date
   const lastDate = myData.length? myData[myData.length-1].tanggal : null;
 
+  // ── Kelengkapan data bulan terpilih (tanggal libur dihitung beres) ──
+  const [ky,km]=curMonth.split('-').map(Number);
+  const lastDay = isRunning ? new Date().getDate() : new Date(ky,km,0).getDate();
+  const missDays=[], offDays=[];
+  for(let d=1;d<=lastDay;d++){
+    const tgl=`${curMonth}-${String(d).padStart(2,'0')}`;
+    if(myData.some(r=>r.tanggal===tgl)) continue;         // semua platform & brand dihitung
+    if(allLibur.some(l=>l.host_email===ME && l.tanggal===tgl)) offDays.push(d);
+    else missDays.push(d);
+  }
+  const offNote = offDays.length? `<span style="color:var(--text3)"> · 🏖️ libur: ${offDays.join(', ')}</span>` : '';
+  const completeCard = missDays.length
+    ? `<div class="tbl-wrap" style="padding:12px 15px;margin-bottom:1rem;border-left:3px solid #f0a868">
+         <div style="font-weight:700;color:#f0a868;font-size:13.5px">⚠️ ${missDays.length} tanggal belum diisi di ${monthName}</div>
+         <div style="font-size:12.5px;color:var(--text2);margin-top:4px">Tanggal: ${missDays.join(', ')}${offNote}</div>
+         <div style="font-size:11.5px;color:var(--text3);margin-top:6px">Kalau tanggal itu kamu libur, kabari leader biar ditandai libur ya.</div>
+       </div>`
+    : `<div class="tbl-wrap" style="padding:12px 15px;margin-bottom:1rem;border-left:3px solid #4ade80">
+         <div style="font-weight:700;color:#4ade80;font-size:13.5px">✅ Data ${monthName} lengkap${isRunning?' sampai hari ini':''}</div>
+         ${offDays.length?`<div style="font-size:12.5px;color:var(--text2);margin-top:4px">🏖️ Libur: ${offDays.join(', ')}</div>`:''}
+       </div>`;
+
   box.innerHTML = `
     <div class="home-filters">
       ${platToggle()}
@@ -676,6 +698,7 @@ function renderHome(){
       ${md.length===0?`<div style="margin-top:12px;font-size:12px;color:#fbbf24;position:relative;z-index:1">${isRunning?'Belum ada data bulan ini — yuk isi lewat menu Input Data.':'Tidak ada data di bulan ini.'}</div>`:''}
     </div>
 
+    ${completeCard}
     <div class="menu-grid" style="margin-bottom:1rem">
       <div class="menu-card" onclick="goTab('p-input',1)">
         <div class="menu-ic" style="background:rgba(167,139,250,.16);color:#c4b5fd">✏️</div>
