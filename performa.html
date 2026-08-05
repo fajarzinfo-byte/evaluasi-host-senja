@@ -654,27 +654,37 @@ function renderHome(){
   // last filled date
   const lastDate = myData.length? myData[myData.length-1].tanggal : null;
 
-  // ── Kelengkapan data bulan terpilih (tanggal libur dihitung beres) ──
+  // ── Kelengkapan data per platform (tanggal libur dihitung beres) ──
   const [ky,km]=curMonth.split('-').map(Number);
   const lastDay = isRunning ? new Date().getDate() : new Date(ky,km,0).getDate();
-  const missDays=[], offDays=[];
-  for(let d=1;d<=lastDay;d++){
-    const tgl=`${curMonth}-${String(d).padStart(2,'0')}`;
-    if(myData.some(r=>r.tanggal===tgl)) continue;         // semua platform & brand dihitung
-    if(allLibur.some(l=>l.host_email===ME && l.tanggal===tgl)) offDays.push(d);
-    else missDays.push(d);
-  }
-  const offNote = offDays.length? `<span style="color:var(--text3)"> · 🏖️ libur: ${offDays.join(', ')}</span>` : '';
-  const completeCard = missDays.length
-    ? `<div class="tbl-wrap" style="padding:12px 15px;margin-bottom:1rem;border-left:3px solid #f0a868">
-         <div style="font-weight:700;color:#f0a868;font-size:13.5px">⚠️ ${missDays.length} tanggal belum diisi di ${monthName}</div>
-         <div style="font-size:12.5px;color:var(--text2);margin-top:4px">Tanggal: ${missDays.join(', ')}${offNote}</div>
-         <div style="font-size:11.5px;color:var(--text3);margin-top:6px">Kalau tanggal itu kamu libur, kabari leader biar ditandai libur ya.</div>
-       </div>`
-    : `<div class="tbl-wrap" style="padding:12px 15px;margin-bottom:1rem;border-left:3px solid #4ade80">
-         <div style="font-weight:700;color:#4ade80;font-size:13.5px">✅ Data ${monthName} lengkap${isRunning?' sampai hari ini':''}</div>
-         ${offDays.length?`<div style="font-size:12.5px;color:var(--text2);margin-top:4px">🏖️ Libur: ${offDays.join(', ')}</div>`:''}
-       </div>`;
+  const gapPlat = plat => {
+    const miss=[], off=[];
+    for(let d=1;d<=lastDay;d++){
+      const tgl=`${curMonth}-${String(d).padStart(2,'0')}`;
+      if(myData.some(r=>r.tanggal===tgl && platOf(r)===plat)) continue;
+      if(allLibur.some(l=>l.host_email===ME && l.tanggal===tgl)) off.push(d);
+      else miss.push(d);
+    }
+    return {miss, off};
+  };
+  const gaps = {tiktok:gapPlat('tiktok'), shopee:gapPlat('shopee')};
+  const totalMiss = gaps.tiktok.miss.length + gaps.shopee.miss.length;
+  const platRow = (plat) => {
+    const g=gaps[plat], ic=plat==='tiktok'?'🎵':'🛒';
+    return `<div style="display:flex;gap:9px;align-items:flex-start;padding:5px 0">
+      <div style="min-width:80px;font-weight:700;font-size:13px">${ic} ${PLAT_LABEL[plat]}</div>
+      <div style="font-size:12.5px;flex:1">${g.miss.length
+        ? `<span style="color:#f0a868;font-weight:700">⚠️ ${g.miss.length} belum diisi:</span> <span style="color:var(--text2)">${g.miss.join(', ')}</span>`
+        : `<span style="color:#4ade80;font-weight:700">✅ Lengkap</span>`}</div>
+    </div>`;
+  };
+  const offAll = gaps.tiktok.off;   // libur sama untuk kedua platform
+  const completeCard = `<div class="tbl-wrap" style="padding:12px 15px;margin-bottom:1rem;border-left:3px solid ${totalMiss?'#f0a868':'#4ade80'}">
+      <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">Kelengkapan data ${monthName}${isRunning?' (s/d hari ini)':''}</div>
+      ${platRow('tiktok')}${platRow('shopee')}
+      ${offAll.length?`<div style="font-size:12px;color:var(--text3);margin-top:5px">🏖️ Libur: ${offAll.join(', ')}</div>`:''}
+      ${totalMiss?`<div style="font-size:11.5px;color:var(--text3);margin-top:6px">Kalau tanggal itu kamu libur, kabari leader biar ditandai libur ya.</div>`:''}
+    </div>`;
 
   box.innerHTML = `
     <div class="home-filters">
@@ -2231,21 +2241,32 @@ function renderLibur(){
   const isCur=LIBUR_MONTH===thisMonth;
   const lastDay=isCur? new Date().getDate() : daysIn;   // bulan berjalan: cek sampai hari ini saja
   const cards=hosts.map(h=>{
-    const missing=[], liburDays=[];
-    for(let d=1;d<=lastDay;d++){
-      const tgl=`${LIBUR_MONTH}-${String(d).padStart(2,'0')}`;
-      const filled=allPerf.some(r=>r.host_email===h.email && r.tanggal===tgl);
-      if(filled) continue;
-      if(allLibur.some(l=>l.host_email===h.email && l.tanggal===tgl)) liburDays.push(d);
-      else missing.push(d);
-    }
-    const status = missing.length
-      ? `<span style="color:#f0a868;font-weight:700">⚠️ ${missing.length} tanggal belum diisi:</span> <span style="color:var(--text2)">${missing.join(', ')}</span>`
-      : `<span style="color:#4ade80;font-weight:700">✅ Lengkap</span>`;
-    const lib = liburDays.length? `<span style="font-size:11px;color:var(--text3)"> · 🏖️ libur: ${liburDays.join(', ')}</span>` : '';
-    return `<div class="tbl-wrap" style="padding:10px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
-      <div style="font-weight:700">${h.name}</div>
-      <div style="font-size:12.5px;text-align:right">${status}${lib}</div>
+    const gapOf = plat => {
+      const miss=[], off=[];
+      for(let d=1;d<=lastDay;d++){
+        const tgl=`${LIBUR_MONTH}-${String(d).padStart(2,'0')}`;
+        if(allPerf.some(r=>r.host_email===h.email && r.tanggal===tgl && platOf(r)===plat)) continue;
+        if(allLibur.some(l=>l.host_email===h.email && l.tanggal===tgl)) off.push(d);
+        else miss.push(d);
+      }
+      return {miss, off};
+    };
+    const g={tiktok:gapOf('tiktok'), shopee:gapOf('shopee')};
+    const totMiss=g.tiktok.miss.length+g.shopee.miss.length;
+    const row=plat=>{
+      const x=g[plat], ic=plat==='tiktok'?'🎵':'🛒';
+      return `<div style="display:flex;gap:9px;align-items:flex-start;padding:3px 0">
+        <div style="min-width:78px;font-size:12.5px;font-weight:600;color:var(--text2)">${ic} ${PLAT_LABEL[plat]}</div>
+        <div style="font-size:12.5px;flex:1">${x.miss.length
+          ? `<span style="color:#f0a868;font-weight:700">⚠️ ${x.miss.length} belum diisi:</span> <span style="color:var(--text2)">${x.miss.join(', ')}</span>`
+          : `<span style="color:#4ade80;font-weight:700">✅ Lengkap</span>`}</div>
+      </div>`;
+    };
+    const off=g.tiktok.off;
+    return `<div class="tbl-wrap" style="padding:11px 14px;margin-bottom:8px;border-left:3px solid ${totMiss?'#f0a868':'#4ade80'}">
+      <div style="font-weight:700;margin-bottom:3px">${h.name}</div>
+      ${row('tiktok')}${row('shopee')}
+      ${off.length?`<div style="font-size:11.5px;color:var(--text3);margin-top:4px">🏖️ Libur: ${off.join(', ')}</div>`:''}
     </div>`;
   }).join('');
 
