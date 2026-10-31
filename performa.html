@@ -1324,9 +1324,7 @@ function renderDash(){
     ${platToggle()}
     <div class="filter-row">
       <select id="bFilter" onchange="DASH_BRAND=this.value; renderDash()"><option value="">Semua brand</option>
-        <option value="Onebear" ${curBrand==='Onebear'?'selected':''}>Onebear</option>
-        <option value="Supoe" ${curBrand==='Supoe'?'selected':''}>Supoe</option>
-        <option value="Momso" ${curBrand==='Momso'?'selected':''}>Momso</option>
+        ${BRANDS.map(b=>`<option value="${b}" ${curBrand===b?'selected':''}>${b}</option>`).join('')}
       </select>
       <select id="mFilter" onchange="DASH_MONTH=this.value; renderDash()">${monthOpts}</select>
     </div>
@@ -1414,7 +1412,7 @@ function renderCompare(){
   const box=document.getElementById('compareContent');
   if(!box) return;
 
-  const curBrand=document.getElementById('cmpBrand')?.value || 'Onebear';
+  const curBrand=document.getElementById('cmpBrand')?.value || BRANDS[0] || '';
 
   const months=[...new Set(allPerf.filter(r=>r.brand===curBrand&&r.tanggal).map(r=>r.tanggal.slice(0,7)))].sort().reverse();
   const thisMonth=new Date().toISOString().slice(0,7);
@@ -1447,9 +1445,7 @@ function renderCompare(){
     ${platToggle()}
     <div class="filter-row">
       <select id="cmpBrand" onchange="renderCompare()">
-        <option value="Onebear" ${curBrand==='Onebear'?'selected':''}>Onebear</option>
-        <option value="Supoe" ${curBrand==='Supoe'?'selected':''}>Supoe</option>
-        <option value="Momso" ${curBrand==='Momso'?'selected':''}>Momso</option>
+        ${BRANDS.map(b=>`<option value="${b}" ${curBrand===b?'selected':''}>${b}</option>`).join('')}
       </select>
       <select id="cmpMonth" onchange="renderCompare()">${monthOpts}</select>
     </div>
