@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0d0c17">
+<meta name="theme-color" content="#07090e">
 <link rel="icon" href="icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="mobile-web-app-capable" content="yes">
@@ -13,262 +13,360 @@
 <meta name="apple-mobile-web-app-title" content="Senja Studio">
 <title>Performa Live — Host</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script>window.Chart&&(Chart.defaults.color='#b0aacb',Chart.defaults.borderColor='rgba(255,255,255,.07)',Chart.defaults.font.family="'Plus Jakarta Sans',sans-serif");</script>
+<script>window.Chart&&(Chart.defaults.color='#808899',Chart.defaults.borderColor='rgba(255,255,255,.06)',Chart.defaults.font.family="'Archivo',system-ui,sans-serif");</script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..700&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap');
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg:#f6f4ef; --surface:#fff; --surface2:#f1ede6;
-    --border:#e7e2d9; --border2:#d4cdc0;
-    --text:#1c1a2e; --text2:#6b6678; --text3:#a8a2b0;
-    --accent:#6d28d9; --accentbg:#f3f0ff;
-    --good:#16a34a; --goodbg:#f0fdf4; --goodbd:#bbf7d0;
-    --warn:#d97706; --warnbg:#fffbeb; --warnbd:#fde68a;
-    --bad:#dc2626; --badbg:#fef2f2; --badbd:#fecaca;
-    --twilight:linear-gradient(135deg,#312e81 0%,#6d28d9 45%,#f97316 100%);
-    --dusk:#1e1b3a;
-    --r:12px; --rs:8px;
-  }
-  body { font-family:'Plus Jakarta Sans', sans-serif; background:var(--bg); color:var(--text); font-size:14px; line-height:1.6; min-height:100vh; }
-
-  /* Login */
-  .login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1rem; background:var(--twilight); position:relative; overflow:hidden; }
-  .login-wrap::before { content:''; position:absolute; width:140%; height:60%; left:-20%; bottom:-10%; background:radial-gradient(ellipse at center, rgba(251,191,36,.35), transparent 70%); pointer-events:none; }
-  .login-card { background:rgba(255,255,255,.97); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.4); border-radius:20px; padding:2.5rem 2.5rem 2rem; width:100%; max-width:400px; text-align:center; box-shadow:0 20px 60px rgba(30,27,58,.4); position:relative; z-index:1; }
-  .brand-mark { display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:1.5rem; }
-  .brand-dot { width:34px; height:34px; border-radius:50%; background:var(--twilight); box-shadow:0 2px 12px rgba(109,40,217,.4); flex-shrink:0; }
-  .brand-name { font-size:19px; font-weight:800; letter-spacing:-.02em; color:var(--text); }
-  .brand-name span { background:var(--twilight); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
-  .login-card h1 { font-size:17px; font-weight:700; margin-bottom:4px; letter-spacing:-.01em; }
-  .login-card p { font-size:13px; color:var(--text2); margin-bottom:1.5rem; }
-  .login-card input { width:100%; padding:12px 14px; border:1px solid var(--border2); border-radius:10px; font-size:14px; margin-bottom:11px; font-family:'Plus Jakarta Sans', sans-serif; color:var(--text); outline:none; transition:border-color .15s, box-shadow .15s; }
-  .login-card input:focus { border-color:var(--accent); box-shadow:0 0 0 3px var(--accentbg); }
-  .btn-primary { width:100%; padding:12px; background:var(--twilight); color:#fff; border:none; border-radius:10px; font-size:14px; font-weight:600; cursor:pointer; font-family:'Plus Jakarta Sans', sans-serif; box-shadow:0 4px 14px rgba(109,40,217,.3); transition:transform .1s, box-shadow .15s; }
-  .btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 18px rgba(109,40,217,.4); }
-  .msg { display:none; margin-top:12px; font-size:13px; }
-
-  /* App shell */
-  .app { display:none; max-width:920px; margin:0 auto; padding:1.5rem 1.5rem 4rem; }
-  .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem; padding-bottom:1.2rem; border-bottom:1px solid var(--border); }
-  .topbar h1 { font-size:19px; font-weight:800; letter-spacing:-.02em; }
-  .topbar p { font-size:13px; color:var(--text2); margin-top:2px; }
-  .topbar-actions { display:flex; gap:8px; align-items:center; }
-  .btn-ghost { padding:6px 14px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); font-size:12px; cursor:pointer; font-family:'Plus Jakarta Sans', sans-serif; color:var(--text2); text-decoration:none; }
-  .btn-ghost:hover { background:var(--surface2); }
-
-  /* Tabs */
-  .tabs { display:flex; gap:6px; margin-bottom:1.3rem; flex-wrap:wrap; }
-  .tab { padding:8px 18px; border-radius:20px; border:1px solid var(--border2); background:var(--surface); font-size:13px; font-weight:600; cursor:pointer; font-family:'Plus Jakarta Sans', sans-serif; color:var(--text2); transition:.15s; }
-  .tab:hover { border-color:var(--accent); color:var(--accent); }
-  .tab.active { background:var(--twilight); color:#fff; border-color:transparent; box-shadow:0 2px 10px rgba(109,40,217,.3); }
-  .panel { display:none; }
-  .panel.active { display:block; }
-
-  /* Form */
-  .form-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:1.5rem; margin-bottom:1rem; }
-  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  .fg { display:flex; flex-direction:column; }
-  .fg.full { grid-column:1 / -1; }
-  .fg label { font-size:11px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px; }
-  .fg input, .fg select { width:100%; padding:9px 12px; border:1px solid var(--border2); border-radius:var(--rs); font-size:13px; font-family:'Plus Jakarta Sans', sans-serif; color:var(--text); background:var(--surface); outline:none; }
-  .fg input:focus, .fg select:focus { border-color:var(--accent); }
-  .group-label { font-size:12px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; margin:16px 0 4px; grid-column:1 / -1; }
-  .group-label:first-child { margin-top:0; }
-  .hint { font-size:11px; color:var(--text3); margin-top:3px; }
-
-  /* Calc preview */
-  .calc-row { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:14px; padding-top:14px; border-top:1px dashed var(--border2); grid-column:1 / -1; }
-  .calc { background:var(--surface2); border-radius:var(--rs); padding:8px 10px; text-align:center; }
-  .calc-l { font-size:10px; color:var(--text3); text-transform:uppercase; letter-spacing:.04em; }
-  .calc-v { font-size:14px; font-weight:600; color:var(--text); margin-top:2px; }
-
-  /* Stats */
-  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:1.3rem; }
-  .stat { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:13px 15px; text-align:center; }
-  .stat-l { font-size:10.5px; font-weight:500; color:var(--text3); text-transform:uppercase; letter-spacing:.05em; margin-bottom:5px; }
-  .stat-v { font-size:19px; font-weight:600; color:var(--text); letter-spacing:-.02em; }
-  .stat-v.good{color:var(--good);} .stat-v.warn{color:var(--warn);} .stat-v.bad{color:var(--bad);}
-  .grp-head { font-size:12px; font-weight:600; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; margin:0 0 8px 2px; }
-  .menu-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:18px; cursor:pointer; transition:border-color .15s, transform .1s; display:block; }
-  .menu-card:hover { border-color:var(--accent); transform:translateY(-1px); }
-  .menu-ic { width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; margin-bottom:10px; }
-  .menu-t { font-size:14px; font-weight:600; margin-bottom:2px; }
-  .menu-s { font-size:12px; color:var(--text3); }
-
-  /* Chart card */
-  .chart-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); padding:16px; margin-bottom:1.3rem; }
-  .chart-card h3 { font-size:13px; font-weight:500; margin-bottom:14px; }
-  .chart-wrap { height:200px; position:relative; }
-  .chart-wrap.sm { height:150px; }
-
-  /* Table */
-  .tbl-wrap { background:var(--surface); border:1px solid var(--border); border-radius:var(--r); overflow:hidden; margin-bottom:1.3rem; }
-  table { width:100%; border-collapse:collapse; font-size:12px; }
-  th { background:var(--surface2); text-align:left; padding:9px 11px; font-weight:600; color:var(--text2); font-size:11px; text-transform:uppercase; letter-spacing:.03em; white-space:nowrap; border-bottom:1px solid var(--border); }
-  td { padding:9px 11px; border-bottom:1px solid var(--border); white-space:nowrap; }
-  tr:last-child td { border-bottom:none; }
-  tr:hover td { background:var(--surface2); }
-  .tbl-scroll { overflow-x:auto; }
-  .num { text-align:right; font-variant-numeric:tabular-nums; }
-
-  /* Brand badge */
-  .badge { display:inline-block; font-size:10px; font-weight:500; padding:2px 8px; border-radius:10px; background:var(--accentbg); color:var(--accent); }
-
-  /* Import */
-  .drop { border:2px dashed var(--border2); border-radius:var(--r); padding:2.5rem; text-align:center; background:var(--surface); cursor:pointer; transition:border-color .15s; }
-  .drop:hover { border-color:var(--accent); }
-  .drop.over { border-color:var(--accent); background:var(--accentbg); }
-  .drop-icon { font-size:32px; margin-bottom:8px; }
-  .drop-t { font-size:14px; font-weight:500; margin-bottom:3px; }
-  .drop-s { font-size:12px; color:var(--text3); }
-
-  /* Misc */
-  .empty { text-align:center; padding:3rem 0; color:var(--text3); font-size:13px; }
-  .toast { position:fixed; bottom:24px; right:24px; padding:12px 18px; border-radius:var(--r); font-size:13px; font-weight:500; border:1px solid var(--border); background:var(--surface); box-shadow:0 4px 16px rgba(0,0,0,.1); z-index:9999; opacity:0; transform:translateY(8px); transition:.2s; pointer-events:none; }
-  .toast.show { opacity:1; transform:translateY(0); }
-  .toast.success { background:var(--goodbg); border-color:var(--goodbd); color:var(--good); }
-  .toast.error { background:var(--badbg); border-color:var(--badbd); color:var(--bad); }
-  .btn-accent { padding:10px 20px; background:var(--text); color:#fff; border:none; border-radius:var(--rs); font-size:13px; font-weight:500; cursor:pointer; font-family:'Plus Jakarta Sans', sans-serif; }
-  .btn-accent:hover { background:#333; }
-  .btn-accent:disabled { opacity:.5; cursor:not-allowed; }
-  .filter-row { display:flex; gap:10px; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
-  .filter-row select { padding:7px 10px; border:1px solid var(--border2); border-radius:var(--rs); font-size:13px; font-family:'Plus Jakarta Sans', sans-serif; color:var(--text); background:var(--surface); outline:none; }
-  .plat-toggle { display:inline-flex; gap:4px; padding:4px; background:var(--surface); border:1px solid var(--border2); border-radius:999px; margin-bottom:1rem; }
-  .pt-btn { padding:6px 16px; border:none; background:transparent; color:var(--text2); font-size:13px; font-weight:600; font-family:'Plus Jakarta Sans',sans-serif; border-radius:999px; cursor:pointer; transition:all .15s; }
-  .pt-btn:hover { color:var(--text); }
-  .pt-btn.active { background:linear-gradient(135deg,#7c4dd6,#b4451a); color:#fff; }
-  .section-title { font-size:15px; font-weight:600; margin-bottom:1rem; }
-
-  @media (max-width:600px){
-    .form-grid{grid-template-columns:1fr;} .stats{grid-template-columns:1fr 1fr;}
-    .calc-row{grid-template-columns:1fr;}
-  }
-
-  /* ════════ SENJA — DUSK THEME (langit malam, sisa cahaya jingga di horizon) ════════ */
+  /* ════════ SENJA STUDIO · GEL LAMPU STUDIO ════════
+     Kaca gelap berasap; warna hanya datang dari gel (brand & platform).
+     Status (naik/turun/peringatan) punya warna sendiri, bukan warna gel. */
+  *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
   :root{
-    --bg:#0d0c17; --surface:#17152a; --surface2:#211e3a;
-    --border:#2a2742; --border2:#3a3658;
-    --text:#f1eefb; --text2:#b0aacb; --text3:#76709a;
-    --accent:#a78bfa; --accent-bg:rgba(167,139,250,.13); --accentbg:rgba(167,139,250,.13);
-    --good:#4ade80; --good-bg:rgba(74,222,128,.13); --goodbg:rgba(74,222,128,.13);
-    --good-border:rgba(74,222,128,.32); --goodbd:rgba(74,222,128,.32);
-    --warn:#fbbf24; --warn-bg:rgba(251,191,36,.13); --warnbg:rgba(251,191,36,.13);
-    --warn-border:rgba(251,191,36,.32); --warnbd:rgba(251,191,36,.32);
-    --bad:#fb7185; --bad-bg:rgba(251,113,133,.13); --badbg:rgba(251,113,133,.13);
-    --bad-border:rgba(251,113,133,.32); --badbd:rgba(251,113,133,.32);
-    --star-on:#fbbf24; --star-off:#272343;
-    --twilight:linear-gradient(135deg,#3b2f9e 0%,#6d28d9 45%,#f97316 100%);
-    --dusk:#17152a;
+    color-scheme:dark;
+    --bg:#07090e; --bg-deep:#040509;
+    --glass:rgba(17,20,30,.56); --glass-hi:rgba(255,255,255,.055); --glass-lo:rgba(255,255,255,.015);
+    --surface:rgba(17,20,30,.56); --surface2:rgba(255,255,255,.05); --surface3:rgba(255,255,255,.085);
+    --solid:#10131c;
+    --border:rgba(255,255,255,.07); --border2:rgba(255,255,255,.13);
+    --text:#eef1f7; --text2:#b1b8c8; --text3:#808899;
+    /* key light: aksi utama, pilihan aktif, fokus */
+    --accent:#e9edf7; --accent-bg:rgba(233,237,247,.09); --accentbg:rgba(233,237,247,.09);
+    --key:#e9edf7; --key-ink:#0b0e15;
+    /* status */
+    --good:#5ee39a; --good-bg:rgba(94,227,154,.12); --goodbg:rgba(94,227,154,.12); --good-border:rgba(94,227,154,.3); --goodbd:rgba(94,227,154,.3);
+    --warn:#f5c451; --warn-bg:rgba(245,196,81,.12); --warnbg:rgba(245,196,81,.12); --warn-border:rgba(245,196,81,.3); --warnbd:rgba(245,196,81,.3);
+    --bad:#ff6b7d; --bad-bg:rgba(255,107,125,.12); --badbg:rgba(255,107,125,.12); --bad-border:rgba(255,107,125,.32); --badbd:rgba(255,107,125,.32);
+    --star-on:#f5c451; --star-off:rgba(255,255,255,.1);
+    /* gel platform */
+    --tiktok:#3fe0e8; --shopee:#ff7a3d;
+    /* gel brand (urutan BRANDS) */
+    --gel-1:#a28bff; --gel-2:#5b8cff; --gel-3:#ff5fb4; --gel-4:#c9f25c;
+    --twilight:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.06));
+    --dusk:var(--solid);
+    --r:14px; --rs:9px; --radius:14px; --radius-sm:9px;
+    --lift:inset 0 1px 0 rgba(255,255,255,.09), inset 0 0 0 1px rgba(255,255,255,.055), 0 22px 44px -28px rgba(0,0,0,.85);
+    --blur:blur(22px) saturate(150%);
+    --ease:cubic-bezier(.16,1,.3,1);
+    --font:'Archivo', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
   }
-  html{ color-scheme:dark; scrollbar-color:#322e4e transparent; }
-  body{ background:
-    radial-gradient(1100px 480px at 88% -8%, rgba(109,40,217,.16), transparent 60%),
-    radial-gradient(900px 420px at 6% 4%, rgba(249,115,22,.07), transparent 55%),
-    var(--bg); background-attachment:fixed; }
-  ::selection{ background:rgba(167,139,250,.35); color:#fff; }
-  ::-webkit-scrollbar{ width:11px; height:11px; }
+  html{ background:#07090e; scrollbar-color:rgba(255,255,255,.16) transparent; -webkit-text-size-adjust:100%; }
+  body{ font-family:var(--font); font-size:14px; line-height:1.55; color:var(--text); min-height:100vh;
+    background:transparent; -webkit-font-smoothing:antialiased; font-feature-settings:'cv11' 1; }
+  /* lampu studio: tiga gel di luar bingkai, menyala tembus kaca */
+  body::before{ content:''; position:fixed; inset:-10vh -10vw; z-index:-1; pointer-events:none;
+    background:
+      radial-gradient(40vw 36vh at 86% 2%, rgba(162,139,255,.26), transparent 70%),
+      radial-gradient(34vw 34vh at 4% 34%, rgba(91,140,255,.2), transparent 70%),
+      radial-gradient(44vw 38vh at 60% 104%, rgba(255,95,180,.2), transparent 70%),
+      radial-gradient(26vw 26vh at 100% 70%, rgba(201,242,92,.08), transparent 70%),
+      radial-gradient(46vw 40vh at 50% 32%, rgba(162,139,255,.12), transparent 72%),
+      radial-gradient(120vw 90vh at 50% 40%, transparent 55%, var(--bg-deep) 100%),
+      var(--bg); }
+  ::selection{ background:rgba(233,237,247,.28); color:#fff; }
+  ::-webkit-scrollbar{ width:10px; height:10px; }
   ::-webkit-scrollbar-track{ background:transparent; }
-  ::-webkit-scrollbar-thumb{ background:#322e4e; border-radius:9px; border:3px solid var(--bg); }
-  ::-webkit-scrollbar-thumb:hover{ background:#473f6b; }
-  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; border-radius:4px; }
-  /* numeric signature face — uang & skor yang paling sering dilihat tim */
-  .brand-name,.hero-num,.stat-v,.stat-value,.host-score,.eval-score,.section-avg,.calc-v{
-    font-family:'Space Grotesk','Plus Jakarta Sans',sans-serif; font-feature-settings:'tnum' 1; }
-  /* login jadi kaca gelap di atas horizon senja */
-  .login-card{ background:rgba(20,18,38,.66)!important; border:1px solid rgba(167,139,250,.22)!important;
-    box-shadow:0 26px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.05)!important; }
-  .login-card input{ background:rgba(10,9,20,.55); }
-  .login-card input::placeholder{ color:var(--text3); }
-  .login-wrap::before{ opacity:.85; }
-  /* tombol aksi pakai gradient senja (sebelumnya pakai --text yang kini terang) */
-  .btn-accent{ background:var(--twilight)!important; color:#fff!important; border:none!important;
-    box-shadow:0 6px 18px rgba(109,40,217,.32); }
-  .btn-accent:hover{ filter:brightness(1.08); transform:translateY(-1px); }
-  /* row actions + edit modal */
-  .row-btn{ background:transparent; border:1px solid var(--border2); border-radius:7px; padding:3px 7px;
-    font-size:13px; cursor:pointer; line-height:1; margin-right:5px; transition:.12s; }
-  .row-btn:hover{ border-color:var(--accent); background:var(--accent-bg); transform:translateY(-1px); }
-  .row-btn.del:hover{ border-color:var(--bad); background:var(--bad-bg); }
-  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(5,4,12,.66); backdrop-filter:blur(3px);
+  ::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.13); border-radius:10px; border:3px solid transparent; background-clip:padding-box; }
+  ::-webkit-scrollbar-thumb:hover{ background:rgba(255,255,255,.24); background-clip:padding-box; border:3px solid transparent; }
+  :focus-visible{ outline:2px solid var(--key); outline-offset:2px; border-radius:6px; }
+  input, select, textarea, button{ font-family:inherit; color:inherit; }
+  input::placeholder, textarea::placeholder{ color:#6d7586; }
+  select option{ background:var(--solid); color:var(--text); }
+  input[type=date]::-webkit-calendar-picker-indicator{ filter:invert(.85); opacity:.7; cursor:pointer; }
+  a{ color:inherit; text-underline-offset:3px; }
+  .ic{ width:18px; height:18px; flex-shrink:0; vertical-align:-3px; }
+  .ic.sm{ width:14px; height:14px; vertical-align:-2px; }
+  .ic.lg{ width:22px; height:22px; }
+  /* angka: sel tetap, tidak menggeser layout saat berubah */
+  .num, .stat-v, .hero-num, .calc-v, .stat-value, .host-score, .eval-score, .section-avg, td{ font-variant-numeric:tabular-nums; }
+  /* angka utama: sedikit dipadatkan seperti nomor di swatch gel */
+  .hero-num, .stat-v, .stat-value, .host-score, .eval-score{ font-stretch:88%; }
+
+  /* ── Kaca ── */
+  .glass{ background:linear-gradient(180deg,var(--glass-hi),var(--glass-lo)), var(--glass);
+    -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur); box-shadow:var(--lift); border-radius:var(--r); }
+
+  /* ── Tombol ── */
+  .btn-primary, .btn-accent{ display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    background:var(--key); color:var(--key-ink); border:0; border-radius:10px; font-weight:600; cursor:pointer;
+    box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 10px 24px -12px rgba(233,237,247,.55);
+    transition:transform .18s var(--ease), box-shadow .18s var(--ease), background .18s; }
+  .btn-primary{ width:100%; padding:12px; font-size:14px; }
+  .btn-accent{ padding:10px 18px; font-size:13px; }
+  .btn-primary:hover, .btn-accent:hover{ background:#fff; transform:translateY(-1px); box-shadow:0 1px 0 #fff inset, 0 14px 30px -12px rgba(233,237,247,.7); }
+  .btn-primary:active, .btn-accent:active{ transform:translateY(0); }
+  .btn-primary:disabled, .btn-accent:disabled{ opacity:.45; cursor:not-allowed; transform:none; box-shadow:none; }
+  .btn-ghost{ display:inline-flex; align-items:center; gap:7px; padding:7px 14px; border-radius:10px; border:0;
+    background:var(--surface2); box-shadow:inset 0 0 0 1px var(--border2); color:var(--text2); font-size:12.5px; font-weight:500;
+    cursor:pointer; text-decoration:none; transition:background .15s, color .15s; }
+  .btn-ghost:hover{ background:var(--surface3); color:var(--text); }
+
+  /* ── Form ── */
+  .fg{ display:flex; flex-direction:column; }
+  .fg.full{ grid-column:1 / -1; }
+  .fg label{ font-size:12px; font-weight:500; color:var(--text2); margin-bottom:6px; }
+  .fg input, .fg select, .fg textarea, .filter-row select, .month-sel{
+    width:100%; padding:9px 12px; border:0; border-radius:var(--rs); font-size:13.5px; color:var(--text);
+    background:rgba(4,6,10,.45); box-shadow:inset 0 0 0 1px var(--border2), inset 0 1px 2px rgba(0,0,0,.35); outline:none;
+    transition:box-shadow .15s, background .15s; }
+  .fg input:hover, .fg select:hover, .filter-row select:hover, .month-sel:hover{ box-shadow:inset 0 0 0 1px rgba(255,255,255,.22), inset 0 1px 2px rgba(0,0,0,.35); }
+  .fg input:focus, .fg select:focus, .fg textarea:focus, .filter-row select:focus, .month-sel:focus{
+    box-shadow:inset 0 0 0 1px var(--key), 0 0 0 4px rgba(233,237,247,.08); background:rgba(4,6,10,.6); }
+  .hint{ font-size:12px; color:var(--text3); margin-top:4px; }
+  .msg{ display:none; margin-top:12px; font-size:13px; }
+
+  /* ── Status: dicap, tidak menghilang ── */
+  .badge{ display:inline-flex; align-items:center; gap:5px; font-size:11px; font-weight:600; padding:2px 8px; border-radius:6px;
+    background:var(--surface2); color:var(--text2); box-shadow:inset 0 0 0 1px var(--border2); white-space:nowrap; }
+  .gel-dot{ display:inline-block; width:8px; height:8px; border-radius:2px; background:var(--gel,#fff);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.35); margin-right:7px; vertical-align:1px; flex-shrink:0; }
+  .stamp{ display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600; padding:3px 9px; border-radius:6px; white-space:nowrap; }
+  .stamp.good{ color:var(--good); background:var(--good-bg); box-shadow:inset 0 0 0 1px var(--good-border); }
+  .stamp.warn{ color:var(--warn); background:var(--warn-bg); box-shadow:inset 0 0 0 1px var(--warn-border); }
+  .stamp.bad{ color:var(--bad); background:var(--bad-bg); box-shadow:inset 0 0 0 1px var(--bad-border); }
+  .stamp.mute{ color:var(--text2); background:var(--surface2); box-shadow:inset 0 0 0 1px var(--border2); }
+
+  /* ── Tabel ── */
+  table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  th{ background:rgba(255,255,255,.035); text-align:left; padding:10px 12px; font-weight:600; color:var(--text3); font-size:11.5px;
+    white-space:nowrap; border-bottom:1px solid var(--border); }
+  td{ padding:10px 12px; border-bottom:1px solid var(--border); white-space:nowrap; }
+  tr:last-child td{ border-bottom:none; }
+  tbody tr:hover td{ background:rgba(255,255,255,.035); }
+  .num{ text-align:right; }
+
+  /* ── Toast ── */
+  .toast{ position:fixed; bottom:24px; right:24px; padding:12px 16px; border-radius:12px; font-size:13px; font-weight:500;
+    background:linear-gradient(180deg,var(--glass-hi),var(--glass-lo)), rgba(17,20,30,.82); -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur);
+    box-shadow:var(--lift), 0 18px 40px -16px rgba(0,0,0,.7); z-index:9999; opacity:0; transform:translateY(8px);
+    transition:opacity .22s var(--ease), transform .22s var(--ease); pointer-events:none; max-width:min(420px,calc(100vw - 32px)); }
+  .toast.show{ opacity:1; transform:translateY(0); }
+  .toast.success{ color:var(--good); box-shadow:var(--lift), inset 0 0 0 1px var(--good-border); }
+  .toast.error{ color:var(--bad); box-shadow:var(--lift), inset 0 0 0 1px var(--bad-border); }
+
+  /* ── Modal ── */
+  .modal-overlay{ display:none; position:fixed; inset:0; background:rgba(3,4,8,.62); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px);
     z-index:200; align-items:center; justify-content:center; padding:1rem; }
-  .modal-overlay.open{ display:flex; }
-  .modal-box{ background:var(--surface); border:1px solid var(--border2); border-radius:16px; width:100%;
-    max-width:560px; max-height:88vh; display:flex; flex-direction:column; box-shadow:0 28px 80px rgba(0,0,0,.6); }
-  .modal-top{ display:flex; justify-content:space-between; align-items:center; padding:16px 20px;
-    border-bottom:1px solid var(--border); }
-  .modal-h{ font-size:15px; font-weight:700; letter-spacing:-.01em; }
-  .modal-x{ background:none; border:none; font-size:22px; line-height:1; cursor:pointer; color:var(--text2); padding:2px 6px; }
-  .modal-x:hover{ color:var(--text); }
+  .modal-overlay.open{ display:flex; animation:fadeIn .2s var(--ease); }
+  .modal-box{ width:100%; max-width:560px; max-height:88vh; display:flex; flex-direction:column; border-radius:18px;
+    background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.02)), rgba(14,17,26,.86);
+    -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur); box-shadow:var(--lift), 0 40px 90px -30px rgba(0,0,0,.9);
+    animation:rise .28s var(--ease); }
+  .modal-top{ display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border); }
+  .modal-h{ font-size:15px; font-weight:600; letter-spacing:-.01em; }
+  .modal-x{ background:none; border:0; font-size:22px; line-height:1; cursor:pointer; color:var(--text3); padding:2px 8px; border-radius:8px; }
+  .modal-x:hover{ color:var(--text); background:var(--surface2); }
   .modal-content{ padding:18px 20px; overflow-y:auto; }
   .modal-foot{ display:flex; justify-content:flex-end; gap:10px; padding:14px 20px; border-top:1px solid var(--border); }
-  /* screenshot upload + viewer */
-  .ss-drop{ border:2px dashed var(--border2); border-radius:var(--r); padding:22px; text-align:center; cursor:pointer; transition:.15s; }
-  .ss-drop:hover{ border-color:var(--accent); background:var(--accent-bg); }
-  .ss-drop.over{ border-color:var(--accent); background:var(--accent-bg); }
-  .ss-view-overlay{ display:none; position:fixed; inset:0; background:rgba(3,2,9,.82); backdrop-filter:blur(4px); z-index:300; align-items:center; justify-content:center; padding:24px; }
-  .ss-view-overlay.open{ display:flex; }
-  .ss-view-overlay img{ max-width:94vw; max-height:88vh; border-radius:12px; box-shadow:0 30px 90px rgba(0,0,0,.7); }
-  .ss-view-x{ position:absolute; top:16px; right:20px; background:rgba(23,21,42,.8); border:1px solid var(--border2); color:var(--text); font-size:22px; line-height:1; width:40px; height:40px; border-radius:50%; cursor:pointer; }
-  .ss-thumb{ display:inline-block; height:46px; border-radius:6px; border:1px solid var(--border2); vertical-align:middle; cursor:pointer; }
+
+  /* ── Skeleton ── */
+  .skel{ background:linear-gradient(100deg,rgba(255,255,255,.04) 30%,rgba(255,255,255,.09) 45%,rgba(255,255,255,.04) 60%);
+    background-size:300% 100%; animation:skel 1.3s linear infinite; border-radius:14px; }
+  @keyframes skel{ from{background-position:120% 0} to{background-position:-60% 0} }
+  @keyframes fadeIn{ from{opacity:0} to{opacity:1} }
+  @keyframes rise{ from{opacity:0; transform:translateY(10px) scale(.985)} to{opacity:1; transform:none} }
   @media (prefers-reduced-motion:reduce){ *{ transition:none!important; animation:none!important; } }
+  /* ── Tanda studio: tiga lembar gel bertumpuk ── */
+  .brand-dot{ position:relative; isolation:isolate; width:34px; height:34px; flex-shrink:0; border-radius:0; box-shadow:none;
+    background:linear-gradient(var(--gel-3),var(--gel-3)) 28% 100% / 60% 60% no-repeat; }
+  .brand-dot::before, .brand-dot::after{ content:''; position:absolute; width:60%; height:60%; border-radius:4px; mix-blend-mode:screen; }
+  .brand-dot::before{ left:0; top:0; background:var(--gel-1); }
+  .brand-dot::after{ right:0; top:16%; background:var(--tiktok); }
+  .brand-mark{ display:flex; align-items:center; gap:12px; }
+  .brand-name{ font-size:18px; font-weight:600; letter-spacing:-.02em; color:var(--text); }
+  .brand-name span{ color:var(--text3); font-weight:500; }
 
-  .hero{ box-shadow:0 14px 40px rgba(0,0,0,.45)!important; border:1px solid rgba(167,139,250,.18)!important; }
-  .hero::after{ content:''; position:absolute; left:-12%; bottom:-65%; width:72%; height:150%;
-    background:radial-gradient(ellipse at center, rgba(251,191,36,.30), transparent 62%); pointer-events:none; }
-  .hero-num{ font-size:38px!important; }
-  .menu-card:hover{ box-shadow:0 8px 22px rgba(0,0,0,.4); }
+  /* ── Login ── */
+  .login-wrap{ min-height:100vh; display:flex; align-items:center; justify-content:center; padding:1.25rem; position:relative; overflow:hidden; }
+  .login-wrap::before{ content:''; position:absolute; inset:0; pointer-events:none;
+    background:
+      radial-gradient(22vw 34vh at 18% 100%, rgba(162,139,255,.55), transparent 70%),
+      radial-gradient(22vw 34vh at 40% 100%, rgba(91,140,255,.5), transparent 70%),
+      radial-gradient(22vw 34vh at 62% 100%, rgba(255,95,180,.5), transparent 70%),
+      radial-gradient(22vw 34vh at 84% 100%, rgba(201,242,92,.32), transparent 70%); filter:blur(14px); }
+  .login-card{ position:relative; z-index:1; width:100%; max-width:400px; padding:2.25rem 2.25rem 1.9rem; text-align:left; border-radius:20px;
+    background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.02)), rgba(14,17,26,.55);
+    -webkit-backdrop-filter:blur(28px) saturate(160%); backdrop-filter:blur(28px) saturate(160%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.14), inset 0 0 0 1px rgba(255,255,255,.07), 0 40px 80px -30px rgba(0,0,0,.9); animation:rise .5s var(--ease); }
+  .login-card .brand-mark{ margin-bottom:1.75rem; }
+  .login-card h1{ font-size:22px; font-weight:600; letter-spacing:-.025em; margin-bottom:6px; line-height:1.2; }
+  .login-card p{ font-size:13.5px; color:var(--text2); margin-bottom:1.5rem; }
+  .login-card input{ width:100%; padding:12px 14px; border:0; border-radius:10px; font-size:14px; margin-bottom:10px; color:var(--text);
+    background:rgba(4,6,10,.5); box-shadow:inset 0 0 0 1px var(--border2); outline:none; transition:box-shadow .15s; }
+  .login-card input:focus{ box-shadow:inset 0 0 0 1px var(--key), 0 0 0 4px rgba(233,237,247,.08); }
+  .login-card .btn-primary{ margin-top:6px; }
+  .login-card .msg{ text-align:left; }
 
-  /* ── Beranda: filter bulan + hero grid ── */
+  /* ── Kerangka app ── */
+  .app{ display:none; max-width:1480px; margin:0 auto; padding:1.25rem clamp(1rem,3.4vw,3rem) 4rem; }
+  .topbar{ display:flex; justify-content:space-between; align-items:center; gap:16px; margin-bottom:1.1rem; padding:4px 0 0; }
+  .topbar h1{ font-size:20px; font-weight:600; letter-spacing:-.025em; line-height:1.2; }
+  .topbar p{ font-size:13px; color:var(--text3); margin-top:2px; }
+  .topbar-actions{ display:flex; gap:8px; align-items:center; }
+
+  /* ── Tab: rel kaca ── */
+  .tabs{ display:flex; gap:2px; margin-bottom:1.4rem; padding:4px; flex-wrap:wrap; width:fit-content; max-width:100%; border-radius:13px;
+    background:rgba(255,255,255,.035); box-shadow:inset 0 0 0 1px var(--border); -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur); }
+  .tab{ padding:8px 15px; border-radius:9px; font-size:13px; font-weight:500; cursor:pointer; color:var(--text2); white-space:nowrap;
+    transition:background .18s var(--ease), color .18s; user-select:none; }
+  .tab:hover{ color:var(--text); background:rgba(255,255,255,.05); }
+  .tab.active{ color:var(--text); background:linear-gradient(180deg,rgba(255,255,255,.14),rgba(255,255,255,.07));
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.16), 0 6px 16px -8px rgba(0,0,0,.8); }
+  .panel{ display:none; }
+  .panel.active{ display:block; animation:fadeIn .25s var(--ease); }
+
+  /* ── Panel isi ── */
+  .form-card, .stat, .menu-card, .chart-card, .tbl-wrap, .drop, .ss-drop{
+    background:linear-gradient(180deg,var(--glass-hi),var(--glass-lo)), var(--glass);
+    -webkit-backdrop-filter:var(--blur); backdrop-filter:var(--blur); box-shadow:var(--lift); border:0; border-radius:var(--r); }
+  .form-card{ padding:1.5rem; margin-bottom:1rem; }
+  .form-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px 16px; }
+  .group-label{ font-size:13px; font-weight:600; color:var(--text); margin:18px 0 2px; grid-column:1 / -1; display:flex; align-items:center; gap:10px; }
+  .group-label::after{ content:''; flex:1; height:1px; background:var(--border); }
+  .group-label:first-child{ margin-top:0; }
+  .calc-row{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px; padding-top:16px; border-top:1px solid var(--border); grid-column:1 / -1; }
+  .calc{ background:rgba(4,6,10,.38); box-shadow:inset 0 0 0 1px var(--border); border-radius:var(--rs); padding:9px 12px; }
+  .calc-l{ font-size:11.5px; color:var(--text3); }
+  .calc-v{ font-size:16px; font-weight:600; color:var(--text); margin-top:1px; letter-spacing:-.01em; }
+
+  /* ── Statistik ── */
+  .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:10px; margin-bottom:1.4rem; }
+  .stat{ position:relative; overflow:hidden; padding:14px 16px; text-align:left; }
+  .stat[style*="--gel"]::before{ content:''; position:absolute; left:-20%; top:-70%; width:90%; height:140%; pointer-events:none;
+    background:radial-gradient(closest-side, color-mix(in srgb, var(--gel) 30%, transparent), transparent); }
+  .stat > *{ position:relative; }
+  .stat-l{ font-size:12px; font-weight:500; color:var(--text2); margin-bottom:6px; display:flex; align-items:center; }
+  .stat-v{ font-size:21px; font-weight:600; color:var(--text); letter-spacing:-.025em; line-height:1.2; }
+  .stat-v.good{ color:var(--good); } .stat-v.warn{ color:var(--warn); } .stat-v.bad{ color:var(--bad); }
+  .grp-head{ font-size:13px; font-weight:600; color:var(--text2); margin:0 0 10px 2px; display:flex; align-items:center; gap:10px; }
+  .grp-head::after{ content:''; flex:1; height:1px; background:var(--border); }
+  .section-title{ font-size:16px; font-weight:600; letter-spacing:-.015em; margin-bottom:1rem; }
+
+  /* ── Menu: lembar gel ── */
+  .menu-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .menu-card{ position:relative; overflow:hidden; display:flex; gap:14px; align-items:flex-start; padding:16px 18px; cursor:pointer; color:inherit; text-decoration:none;
+    transition:transform .22s var(--ease), box-shadow .22s var(--ease); }
+  .menu-card::before{ content:''; position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .25s var(--ease);
+    background:radial-gradient(120% 90% at 0% 0%, color-mix(in srgb, var(--gel,#e9edf7) 22%, transparent), transparent 60%); }
+  .menu-card:hover{ transform:translateY(-2px); box-shadow:var(--lift), 0 26px 40px -26px color-mix(in srgb, var(--gel,#e9edf7) 70%, transparent); }
+  .menu-card:hover::before{ opacity:1; }
+  .menu-ic{ position:relative; width:38px; height:38px; border-radius:10px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    color:var(--gel,#e9edf7); background:color-mix(in srgb, var(--gel,#e9edf7) 14%, transparent); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--gel,#e9edf7) 30%, transparent); }
+  .menu-t{ position:relative; font-size:14px; font-weight:600; margin:1px 0 2px; letter-spacing:-.01em; }
+  .menu-s{ position:relative; font-size:12.5px; color:var(--text3); }
+
+  /* ── Grafik & tabel ── */
+  .chart-card{ padding:16px 18px; margin-bottom:1.4rem; }
+  .chart-card h3{ font-size:13.5px; font-weight:600; margin-bottom:14px; color:var(--text); }
+  .chart-wrap{ height:220px; position:relative; }
+  .chart-wrap.sm{ height:160px; }
+  .tbl-wrap{ overflow:hidden; margin-bottom:1.4rem; }
+  .tbl-scroll{ overflow:auto; max-height:560px; }
+  .tbl-scroll th{ position:sticky; top:0; z-index:2; background:rgba(20,24,34,.96); }
+  tbody tr:nth-child(even) td{ background:rgba(255,255,255,.018); }
+
+  /* ── Import / unggah ── */
+  .drop{ padding:2.5rem; text-align:center; cursor:pointer; box-shadow:var(--lift), inset 0 0 0 1px var(--border2); outline:1px dashed rgba(255,255,255,.18); outline-offset:-10px; transition:outline-color .15s, background .15s; }
+  .drop:hover, .drop.over{ outline-color:var(--key); background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03)), var(--glass); }
+  .drop-icon{ margin-bottom:10px; color:var(--text2); display:flex; justify-content:center; }
+  .drop-t{ font-size:14px; font-weight:600; margin-bottom:3px; }
+  .drop-s{ font-size:12.5px; color:var(--text3); }
+  .ss-drop{ padding:18px; text-align:center; cursor:pointer; outline:1px dashed rgba(255,255,255,.16); outline-offset:-8px; transition:outline-color .15s; }
+  .ss-drop:hover, .ss-drop.over{ outline-color:var(--key); }
+  .ss-view-overlay{ display:none; position:fixed; inset:0; background:rgba(3,4,8,.86); -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); z-index:300; align-items:center; justify-content:center; padding:24px; }
+  .ss-view-overlay.open{ display:flex; animation:fadeIn .2s var(--ease); }
+  .ss-view-overlay img{ max-width:94vw; max-height:88vh; border-radius:12px; box-shadow:0 40px 90px rgba(0,0,0,.7); }
+  .ss-view-x{ position:absolute; top:16px; right:20px; width:40px; height:40px; border-radius:50%; border:0; cursor:pointer; color:var(--text); font-size:22px; line-height:1;
+    background:rgba(17,20,30,.7); box-shadow:inset 0 0 0 1px var(--border2); }
+  .ss-thumb{ display:inline-block; height:46px; border-radius:6px; box-shadow:0 0 0 1px var(--border2); vertical-align:middle; cursor:pointer; }
+
+  /* ── Filter & platform ── */
+  .empty{ text-align:center; padding:3rem 1rem; color:var(--text3); font-size:13.5px; }
+  .filter-row{ display:flex; gap:10px; align-items:center; margin-bottom:1rem; flex-wrap:wrap; }
+  .filter-row select{ width:auto; min-width:150px; }
+  .plat-toggle{ display:inline-flex; gap:2px; padding:3px; border-radius:11px; margin-bottom:1rem;
+    background:rgba(255,255,255,.035); box-shadow:inset 0 0 0 1px var(--border); }
+  .pt-btn{ display:inline-flex; align-items:center; gap:7px; padding:6px 13px; border:0; background:transparent; color:var(--text2); font-size:13px; font-weight:500;
+    border-radius:8px; cursor:pointer; transition:background .18s var(--ease), color .18s; --pg:var(--key); }
+  .pt-btn::before{ content:''; width:7px; height:7px; border-radius:2px; background:var(--pg); opacity:.45; transition:opacity .18s, box-shadow .18s; }
+  .pt-btn[onclick*="tiktok"]{ --pg:var(--tiktok); }
+  .pt-btn[onclick*="shopee"]{ --pg:var(--shopee); }
+  .pt-btn:hover{ color:var(--text); }
+  .pt-btn.active{ color:var(--text); background:color-mix(in srgb, var(--pg) 15%, rgba(255,255,255,.04)); box-shadow:inset 0 0 0 1px color-mix(in srgb, var(--pg) 38%, transparent); }
+  .pt-btn.active::before{ opacity:1; }
+
+  /* ── Aksi baris ── */
+  .row-btn{ display:inline-flex; align-items:center; justify-content:center; width:28px; height:28px; padding:0; margin-right:4px; border:0; border-radius:8px; cursor:pointer;
+    background:transparent; color:var(--text3); box-shadow:inset 0 0 0 1px var(--border2); font-size:13px; line-height:1; transition:.15s; }
+  .row-btn:hover{ color:var(--text); background:var(--surface3); }
+  .row-btn.del:hover{ color:var(--bad); background:var(--bad-bg); box-shadow:inset 0 0 0 1px var(--bad-border); }
+
+  /* ── Beranda: hero kaca dengan gel per brand ── */
   .home-filters{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:1rem; }
   .home-filters .plat-toggle{ margin-bottom:0; }
-  .month-sel{ padding:8px 16px 8px 12px; border:1px solid var(--border2); border-radius:999px; font-size:13px;
-    font-weight:600; font-family:'Plus Jakarta Sans',sans-serif; color:var(--text); background:var(--surface);
-    outline:none; cursor:pointer; }
-  .month-sel:hover{ border-color:var(--accent); }
-  .month-sel:focus{ border-color:var(--accent); }
-  .hero-grid{ display:grid; grid-template-columns:1fr; gap:16px; align-items:end; position:relative; z-index:1; }
-  .hero-spark{ height:72px; position:relative; }
-  .hero-spark-l{ font-size:10px; color:rgba(255,255,255,.55); text-transform:uppercase; letter-spacing:.06em; margin-bottom:4px; }
-  .delta-chip{ display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; padding:3px 11px;
-    border-radius:999px; background:rgba(0,0,0,.28); border:1px solid rgba(255,255,255,.14); vertical-align:middle; }
-  .delta-chip.up{ color:#86efac; } .delta-chip.down{ color:#fda4af; } .delta-chip.flat{ color:rgba(255,255,255,.75); }
-  .hero-sub{ display:flex; gap:18px; font-size:13px; color:rgba(255,255,255,.82); flex-wrap:wrap; }
-  .hero-note{ margin-top:10px; font-size:11.5px; color:rgba(255,255,255,.62); position:relative; z-index:1; }
-  .menu-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .month-sel{ width:auto; padding:8px 30px 8px 12px; font-weight:500; cursor:pointer; }
+  .hero{ position:relative; overflow:hidden; isolation:isolate; padding:28px 30px 24px; margin-bottom:1.4rem; border-radius:18px; color:var(--text);
+    background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.015)), rgba(14,17,26,.5);
+    -webkit-backdrop-filter:blur(26px) saturate(160%); backdrop-filter:blur(26px) saturate(160%);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.12), inset 0 0 0 1px rgba(255,255,255,.06), 0 30px 60px -34px rgba(0,0,0,.9); }
+  .gel-field{ position:absolute; inset:0; z-index:-1; pointer-events:none; }
+  .gel-field i{ position:absolute; bottom:-62%; border-radius:50%; filter:blur(26px); mix-blend-mode:screen;
+    background:radial-gradient(closest-side, color-mix(in srgb, var(--gel) 95%, transparent), color-mix(in srgb, var(--gel) 42%, transparent) 50%, transparent);
+    animation:gelIn .9s var(--ease) both; }
+  @keyframes gelIn{ from{ opacity:0; transform:translateY(18%) scale(.85); } to{ opacity:1; transform:none; } }
+  .hero-label{ font-size:13px; color:var(--text2); font-weight:500; }
+  .hero-label b{ color:var(--text); font-weight:600; }
+  .hero-grid{ display:grid; grid-template-columns:1fr; gap:18px; align-items:end; }
+  .hero-row{ display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin:8px 0 14px; }
+  .hero-num{ font-size:44px; font-weight:600; letter-spacing:-.02em; line-height:1; font-stretch:78%; }
+  .hero-spark{ height:104px; padding-top:22px; position:relative; }
+  .hero-spark-l{ position:absolute; top:0; left:0; font-size:12px; color:var(--text3); }
+  .delta-chip{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; padding:4px 10px; border-radius:8px;
+    background:rgba(4,6,10,.4); box-shadow:inset 0 0 0 1px var(--border2); white-space:nowrap; }
+  .delta-chip.up{ color:var(--good); } .delta-chip.down{ color:var(--bad); } .delta-chip.flat{ color:var(--text2); }
+  .hero-sub{ display:flex; gap:8px 22px; font-size:13px; color:var(--text2); flex-wrap:wrap; }
+  .hero-sub span{ white-space:nowrap; }
+  .hero-note{ margin-top:14px; font-size:12px; color:var(--text3); }
+  .hero-empty{ margin-top:12px; font-size:12.5px; color:var(--warn); }
+  .complete-card{ padding:14px 16px; margin-bottom:1.2rem; }
+  .complete-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; font-size:13px; font-weight:600; }
+  .plat-row{ display:flex; gap:12px; align-items:flex-start; padding:6px 0; font-size:13px; border-top:1px solid var(--border); }
+  .plat-row:first-of-type{ border-top:0; }
+  .plat-name{ min-width:88px; display:flex; align-items:center; gap:8px; font-weight:600; }
+  .plat-name::before{ content:''; width:8px; height:8px; border-radius:2px; background:var(--pg); }
+  .complete-foot{ font-size:12px; color:var(--text3); margin-top:8px; display:flex; align-items:center; gap:6px; }
 
-  /* ── Desktop: layar penuh (HP tetap seperti biasa) ── */
+  /* ── Skeleton & avatar ── */
+  .skel-chip{ height:38px; width:min(340px,80%); border-radius:11px; margin-bottom:1rem; }
+  .skel-hero{ height:190px; border-radius:18px; margin-bottom:1.4rem; }
+  .skel-card{ height:96px; }
+  .skel-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .h-ava{ width:38px; height:38px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-weight:600; font-size:15px; color:#fff; flex-shrink:0;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.3), 0 6px 14px -6px rgba(0,0,0,.8); }
+  .swatch{ width:26px; height:26px; border-radius:8px; border:0; cursor:pointer; margin:0 6px 6px 0; padding:0; box-shadow:inset 0 1px 0 rgba(255,255,255,.3); }
+  .swatch.sel{ box-shadow:0 0 0 2px var(--bg), 0 0 0 4px var(--key); }
+  .pt-btn,.tab,.menu-card,.month-sel,.btn-ghost,.btn-accent{ touch-action:manipulation; }
+
+  @media (max-width:600px){
+    .form-grid{ grid-template-columns:1fr; } .stats{ grid-template-columns:1fr 1fr; }
+    .calc-row{ grid-template-columns:1fr 1fr; } .menu-grid{ grid-template-columns:1fr; }
+    .hero{ padding:22px 20px 20px; } .hero-num{ font-size:34px; }
+    .tabs{ width:100%; overflow-x:auto; flex-wrap:nowrap; }
+    .topbar h1{ font-size:18px; }
+  }
   @media (min-width:1100px){
-    .app{ max-width:none; padding:2rem clamp(2.5rem,4.5vw,4.5rem) 4rem; }
-    .menu-grid{ grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); }
-    .stats{ grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); }
+    .menu-grid{ grid-template-columns:repeat(3,1fr); }
+    .stats{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); }
     .form-card{ padding:1.8rem 2rem; }
     .form-grid{ grid-template-columns:repeat(3,1fr); }
-    .chart-wrap{ height:280px; } .chart-wrap.sm{ height:190px; }
-    .hero-grid{ grid-template-columns:1fr minmax(320px,420px); gap:28px; }
-    .hero-spark{ height:96px; }
-    .hero-num{ font-size:44px!important; }
-    #hostCards{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; align-items:start; }
+    .chart-wrap{ height:290px; } .chart-wrap.sm{ height:200px; }
+    .hero{ padding:34px 38px 28px; }
+    .hero-grid{ grid-template-columns:1fr minmax(340px,440px); gap:36px; }
+    .hero-spark{ height:134px; }
+    .hero-num{ font-size:60px; }
+    .skel-grid{ grid-template-columns:repeat(4,1fr); }
+    #hostCards{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; align-items:start; }
     #hostCards>div{ margin-bottom:0!important; height:100%; }
   }
-
-  /* ── UI: skeleton, avatar host, tabel panjang ── */
-  .skel{ background:linear-gradient(100deg,var(--surface2) 30%,#2c2850 45%,var(--surface2) 60%); background-size:300% 100%; animation:skel 1.25s linear infinite; border-radius:12px; }
-  @keyframes skel{ from{background-position:120% 0} to{background-position:-60% 0} }
-  .skel-chip{ height:38px; width:min(340px,80%); border-radius:999px; margin-bottom:1rem; }
-  .skel-hero{ height:170px; border-radius:16px; margin-bottom:1.3rem; }
-  .skel-card{ height:112px; }
-  .skel-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
-  @media (min-width:1100px){ .skel-grid{ grid-template-columns:repeat(4,1fr); } }
-  .h-ava{ width:38px; height:38px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:15px; color:#fff; flex-shrink:0; box-shadow:0 2px 8px rgba(0,0,0,.35); font-family:'Space Grotesk','Plus Jakarta Sans',sans-serif; }
-  .swatch{ width:26px; height:26px; border-radius:50%; border:2px solid transparent; cursor:pointer; margin:0 6px 6px 0; padding:0; }
-  .swatch.sel{ border-color:#fff; box-shadow:0 0 0 2px var(--accent); }
-  .pt-btn,.tab,.menu-card,.month-sel,.btn-ghost,.btn-accent{ touch-action:manipulation; }
-  .tbl-scroll{ max-height:540px; overflow:auto; }
-  .tbl-scroll th{ position:sticky; top:0; z-index:2; }
-  tbody tr:nth-child(even) td{ background:rgba(255,255,255,.025); }
-  tbody tr:hover td{ background:var(--surface2); }
-
 </style>
 </head>
 <body>
@@ -358,7 +456,7 @@
           <div id="e_ss_current" style="margin-bottom:8px"></div>
           <div class="ss-drop" id="e_ss_drop" style="padding:16px">
             <input type="file" id="e_ss_file" accept="image/*" style="display:none" />
-            <div id="e_ss_prompt"><span style="font-size:20px">📷</span> <span class="drop-s">Klik atau tempel (Ctrl+V) untuk ganti screenshot</span></div>
+            <div id="e_ss_prompt" style="display:flex;align-items:center;justify-content:center;gap:8px;color:var(--text2)"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3Z"/><circle cx="12" cy="13" r="3.5"/></svg> <span class="drop-s">Klik atau tempel (Ctrl+V) untuk ganti screenshot</span></div>
             <img id="e_ss_preview" alt="preview" style="display:none;max-width:100%;max-height:200px;border-radius:8px" />
           </div>
           <div class="hint">Kosongkan untuk tetap pakai yang lama.</div>
@@ -387,7 +485,44 @@ const sbSignup = supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {auth:{persi
 // dikelola lewat tab "Tim" di panel leader — tidak perlu edit file lagi. ──
 let HOST_MAP={}, BRANDS=[], BRAND_HOSTS={}, ALL_HOSTS=[];
 const HOST_PALETTE=['#e879f9','#a855f7','#3b82f6','#06b6d4','#f97316','#ef4444','#22c55e','#eab308','#f472b6','#38bdf8'];
-const BRAND_PALETTE=['#e879f9','#3b82f6','#f97316','#34d399','#a78bfa','#fbbf24','#fb7185','#60a5fa'];
+const BRAND_PALETTE=['#a28bff','#5b8cff','#ff5fb4','#c9f25c','#5fe0e6','#ff9a5c','#f0a6ff','#9fd0ff'];   // gel brand, urutan BRANDS
+// ── Ikon garis (satu gaya, satu ketebalan) ──
+const IC={
+  edit:'<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M7 16v-5"/><path d="M12 16V8"/><path d="M17 16V6"/>',
+  eval:'<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
+  zap:'<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8Z"/>',
+  scale:'<path d="M12 3v18"/><path d="M7 21h10"/><path d="M4 7h16"/><path d="m4 7-2.5 6a3.5 3.5 0 0 0 5 0Z"/><path d="m20 7-2.5 6a3.5 3.5 0 0 0 5 0Z"/>',
+  trend:'<path d="m3 17 6-6 4 4 8-8"/><path d="M14 7h7v7"/>',
+  import:'<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+  camera:'<path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3Z"/><circle cx="12" cy="13" r="3.5"/>',
+  trash:'<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="m19 6-1 14H6L5 6"/>',
+  alert:'<path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  off:'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>',
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/>',
+  x:'<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9"/><path d="M16 3.1a4 4 0 0 1 0 7.8"/>',
+  target:'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/>',
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+  script:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M8 9h2"/>',
+  bag:'<path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  siren:'<path d="M7 18v-6a5 5 0 0 1 10 0v6"/><path d="M5 21h14v-3H5Z"/><path d="M12 2v2"/><path d="m4.2 5.2 1.4 1.4"/><path d="m19.8 5.2-1.4 1.4"/>',
+  growth:'<path d="M12 22V12"/><path d="M12 12C12 7 8 5 4 5c0 5 4 7 8 7Z"/><path d="M12 12c0-4 3-7 8-7 0 5-3 7-8 7Z"/>',
+  rocket:'<path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9a2.2 2.2 0 0 0-2.9-.1Z"/><path d="m12 15-3-3a22 22 0 0 1 2-4A12.9 12.9 0 0 1 22 2c0 2.7-.8 7.5-6 11a22.4 22.4 0 0 1-4 2Z"/><path d="M9 12H4s.6-3 2-4c1.6-1.1 5 0 5 0"/><path d="M12 15v5s3-.6 4-2c1.1-1.6 0-5 0-5"/>',
+  party:'<path d="M5.8 11.3 2 22l10.7-3.8"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="M22 20h.01"/><path d="m22 2-2.2.7a2.9 2.9 0 0 0-1.9 3.3c.2.9-.5 1.7-1.4 1.7h-.4"/><path d="M11 13c1.9 1.9 2.4 4.4 1.1 5.6s-3.7.7-5.6-1.1-2.4-4.4-1.1-5.6 3.7-.7 5.6 1.1Z"/>',
+  back:'<path d="m15 18-6-6 6-6"/>',
+};
+function ic(n,c){ return `<svg class="ic ${c||''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${IC[n]||''}</svg>`; }
+// Gel di belakang hero: satu cahaya per brand, lebarnya sebanding porsi GMV
+function gelField(parts){
+  const live=(parts||[]).filter(p=>p.v>0), tot=live.reduce((a,p)=>a+p.v,0);
+  if(!(tot>0)) return '';
+  let x=0;
+  return `<div class="gel-field" aria-hidden="true">${live.map((p,i)=>{ const sh=p.v/tot, w=Math.max(22,sh*120), c=(x+sh/2)*100; x+=sh;
+    return `<i style="--gel:${p.c};left:${(c-w/2).toFixed(1)}%;width:${w.toFixed(1)}%;height:${(90+sh*110).toFixed(0)}%;animation-delay:${i*90}ms"></i>`; }).join('')}</div>`;
+}
 const brandColor = b => BRAND_PALETTE[Math.max(0,BRANDS.indexOf(b)) % BRAND_PALETTE.length];
 
 function applyConfig(cfg){
@@ -421,9 +556,9 @@ function pct(n){ return (n*100).toFixed(2)+'%'; }
 function deltaSpan(cur, prev){
   if(prev==null || prev<=0 || cur==null || cur<=0) return '';
   const d=Math.round((cur/prev-1)*100);
-  const col=d>0?'var(--good)':(d<0?'#f87171':'var(--text3)');
+  const col=d>0?'var(--good)':(d<0?'var(--bad)':'var(--text3)');
   const arr=d>0?'▲':(d<0?'▼':'');
-  return ` <span style="font-size:10px;font-weight:700;color:${col}">${(d>0?'+':'')+d}%${arr}</span>`;
+  return ` <span style="font-size:11px;font-weight:600;color:${col}">${(d>0?'+':'')+d}%${arr}</span>`;
 }
 // ── Input angka ala Indonesia: titik = pemisah ribuan (bukan desimal) ──
 // "410.256" maupun "410256" → 410256. Field bilangan bulat dibaca via intVal.
@@ -529,7 +664,7 @@ function drawHomeSpark(rows){
   const wrap=el.closest('.hero-spark');
   if(days.length<2){ if(wrap) wrap.style.display='none'; return; }
   homeSpark=new Chart(el,{type:'line',data:{labels:days,datasets:[{data:days.map(d=>byDay[d]),
-    borderColor:'rgba(255,255,255,.92)', backgroundColor:'rgba(251,191,36,.20)', fill:true,
+    borderColor:'rgba(233,237,247,.9)', backgroundColor:'rgba(233,237,247,.07)', fill:true,
     tension:.35, pointRadius:0, pointHitRadius:14, borderWidth:2}]},
     options:{responsive:true, maintainAspectRatio:false, animation:{duration:350},
       plugins:{legend:{display:false}, tooltip:{callbacks:{title:i=>'Tanggal '+i[0].label, label:i=>rp(i.raw)}}},
@@ -546,7 +681,7 @@ async function doLogin(){
   const {data,error}=await sb.auth.signInWithPassword({email,password:pass});
   if(error){
     const m=document.getElementById('loginMsg');
-    m.textContent='Email atau password salah.'; m.style.color='#dc2626'; m.style.display='block';
+    m.textContent='Email atau password salah.'; m.style.color='var(--bad)'; m.style.display='block';
     document.getElementById('loginBtn').textContent='Masuk'; document.getElementById('loginBtn').disabled=false;
     return;
   }
@@ -670,20 +805,20 @@ function renderHome(){
   const gaps = {tiktok:gapPlat('tiktok'), shopee:gapPlat('shopee')};
   const totalMiss = gaps.tiktok.miss.length + gaps.shopee.miss.length;
   const platRow = (plat) => {
-    const g=gaps[plat], ic=plat==='tiktok'?'🎵':'🛒';
-    return `<div style="display:flex;gap:9px;align-items:flex-start;padding:5px 0">
-      <div style="min-width:80px;font-weight:700;font-size:13px">${ic} ${PLAT_LABEL[plat]}</div>
-      <div style="font-size:12.5px;flex:1">${g.miss.length
-        ? `<span style="color:#f0a868;font-weight:700">⚠️ ${g.miss.length} belum diisi:</span> <span style="color:var(--text2)">${g.miss.join(', ')}</span>`
-        : `<span style="color:#4ade80;font-weight:700">✅ Lengkap</span>`}</div>
+    const g=gaps[plat];
+    return `<div class="plat-row" style="--pg:var(--${plat})">
+      <div class="plat-name">${PLAT_LABEL[plat]}</div>
+      <div style="flex:1">${g.miss.length
+        ? `<span style="color:var(--warn);font-weight:600">${g.miss.length} belum diisi:</span> <span style="color:var(--text2)">${g.miss.join(', ')}</span>`
+        : `<span style="color:var(--good);font-weight:600">Lengkap</span>`}</div>
     </div>`;
   };
   const offAll = gaps.tiktok.off;   // libur sama untuk kedua platform
-  const completeCard = `<div class="tbl-wrap" style="padding:12px 15px;margin-bottom:1rem;border-left:3px solid ${totalMiss?'#f0a868':'#4ade80'}">
-      <div style="font-size:12px;color:var(--text3);text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px">Kelengkapan data ${monthName}${isRunning?' (s/d hari ini)':''}</div>
+  const completeCard = `<div class="tbl-wrap complete-card">
+      <div class="complete-head"><span>Kelengkapan data ${monthName}${isRunning?' (s/d hari ini)':''}</span>${totalMiss?`<span class="stamp warn">${ic('alert','sm')} ${totalMiss} belum diisi</span>`:`<span class="stamp good">${ic('check','sm')} Lengkap</span>`}</div>
       ${platRow('tiktok')}${platRow('shopee')}
-      ${offAll.length?`<div style="font-size:12px;color:var(--text3);margin-top:5px">🏖️ Libur: ${offAll.join(', ')}</div>`:''}
-      ${totalMiss?`<div style="font-size:11.5px;color:var(--text3);margin-top:6px">Kalau tanggal itu kamu libur, kabari leader biar ditandai libur ya.</div>`:''}
+      ${offAll.length?`<div class="complete-foot">${ic('off','sm')} Libur: ${offAll.join(', ')}</div>`:''}
+      ${totalMiss?`<div class="complete-foot">Kalau tanggal itu kamu libur, kabari leader biar ditandai libur ya.</div>`:''}
     </div>`;
 
   box.innerHTML = `
@@ -691,12 +826,13 @@ function renderHome(){
       ${platToggle()}
       <select class="month-sel" onchange="setHomeMonth(this.value)" title="Pilih bulan">${homeMonthOpts(scope, curMonth)}</select>
     </div>
-    <div class="hero" style="background:linear-gradient(135deg,#241f47 0%,#5b2da0 50%,#b4451a 100%);border-radius:16px;padding:26px;color:#fff;margin-bottom:1.3rem;box-shadow:0 8px 30px rgba(30,27,58,.25);position:relative;overflow:hidden">
+    <div class="hero">
+      ${gelField(me.brands.map(b=>({c:brandColor(b), v:md.filter(r=>r.brand===b).reduce((a,r)=>a+(+r.gmv||0),0)})))}
       <div class="hero-grid">
         <div>
-          <div style="font-size:12px;color:rgba(255,255,255,.72);text-transform:uppercase;letter-spacing:.05em">GMV ${isRunning?'Bulan Ini':''} — ${monthName} · ${PLAT_LABEL[PLAT_VIEW]}</div>
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0">
-            <span class="hero-num" id="heroNum" style="font-size:34px;font-weight:600;letter-spacing:-.02em">${rp(tot.gmv)}</span>${chip}
+          <div class="hero-label">GMV ${isRunning?'bulan ini':''} · <b>${monthName}</b> · ${PLAT_LABEL[PLAT_VIEW]}</div>
+          <div class="hero-row">
+            <span class="hero-num" id="heroNum">${rp(tot.gmv)}</span>${chip}
           </div>
           <div class="hero-sub">
             <span>${md.length} sesi live${deltaSpan(md.length, pt.n)}</span><span>${closing} sesi closing</span><span>${tot.pembeli} pembeli${deltaSpan(tot.pembeli, pt.pembeli)}</span><span>${tot.viewers.toLocaleString('id-ID')} viewers${deltaSpan(tot.viewers, pt.viewers)}</span>
@@ -705,30 +841,26 @@ function renderHome(){
         <div class="hero-spark"><div class="hero-spark-l">GMV harian</div><canvas id="heroSpark"></canvas></div>
       </div>
       ${note?`<div class="hero-note">${note}</div>`:''}
-      ${md.length===0?`<div style="margin-top:12px;font-size:12px;color:#fbbf24;position:relative;z-index:1">${isRunning?'Belum ada data bulan ini — yuk isi lewat menu Input Data.':'Tidak ada data di bulan ini.'}</div>`:''}
+      ${md.length===0?`<div class="hero-empty">${isRunning?'Belum ada data bulan ini — yuk isi lewat menu Input Data.':'Tidak ada data di bulan ini.'}</div>`:''}
     </div>
 
     ${completeCard}
     <div class="menu-grid" style="margin-bottom:1rem">
       <div class="menu-card" onclick="goTab('p-input',1)">
-        <div class="menu-ic" style="background:rgba(167,139,250,.16);color:#c4b5fd">✏️</div>
-        <div class="menu-t">Input Data Performa</div>
-        <div class="menu-s">Isi data tiap sesi live kamu</div>
+        <div class="menu-ic">${ic('edit')}</div>
+        <div><div class="menu-t">Input Data Performa</div><div class="menu-s">Isi data tiap sesi live kamu</div></div>
       </div>
       <div class="menu-card" onclick="goTab('p-mine',2)">
-        <div class="menu-ic" style="background:rgba(74,222,128,.15);color:#4ade80">📊</div>
-        <div class="menu-t">Performa Saya</div>
-        <div class="menu-s">Grafik &amp; riwayat lengkap</div>
+        <div class="menu-ic">${ic('chart')}</div>
+        <div><div class="menu-t">Performa Saya</div><div class="menu-s">Grafik &amp; riwayat lengkap</div></div>
       </div>
-      <a class="menu-card" href="https://tinyurl.com/host-senja" style="text-decoration:none;color:inherit">
-        <div class="menu-ic" style="background:rgba(251,191,36,.15);color:#fbbf24">📋</div>
-        <div class="menu-t">Hasil Evaluasi</div>
-        <div class="menu-s">Lihat penilaian &amp; target dari leader</div>
+      <a class="menu-card" href="https://tinyurl.com/host-senja">
+        <div class="menu-ic">${ic('eval')}</div>
+        <div><div class="menu-t">Hasil Evaluasi</div><div class="menu-s">Lihat penilaian &amp; target dari leader</div></div>
       </a>
       <div class="menu-card" onclick="goTab('p-input',1)">
-        <div class="menu-ic" style="background:rgba(167,139,250,.13);color:#a78bfa">⚡</div>
-        <div class="menu-t">Input Cepat</div>
-        <div class="menu-s">Langsung isi sesi terbaru</div>
+        <div class="menu-ic">${ic('zap')}</div>
+        <div><div class="menu-t">Input Cepat</div><div class="menu-s">Langsung isi sesi terbaru</div></div>
       </div>
     </div>
     ${lastDate?`<div style="text-align:center;font-size:12px;color:var(--text3)">Data terakhir diisi: ${fmtTgl(lastDate)}</div>`:''}
@@ -814,7 +946,7 @@ function hostFormHTML(){
     <div class="fg full">
       <div class="ss-drop" id="f_ss_drop">
         <input type="file" id="f_ss_file" accept="image/*" style="display:none" />
-        <div id="f_ss_prompt"><div style="font-size:24px;margin-bottom:4px">📷</div><div class="drop-t">Klik, drag, atau tempel (Ctrl+V)</div><div class="drop-s">Bukti angka dari TikTok LIVE Center</div></div>
+        <div id="f_ss_prompt"><div class="drop-icon">${ic('camera','lg')}</div><div class="drop-t">Klik, drag, atau tempel (Ctrl+V)</div><div class="drop-s">Bukti angka dari TikTok LIVE Center</div></div>
         <img id="f_ss_preview" alt="preview screenshot" style="display:none;max-width:100%;max-height:240px;border-radius:8px" />
       </div>
       <div class="hint" id="f_ss_hint">Otomatis dikompres biar hemat kuota. Boleh dikosongin.</div>
@@ -1004,7 +1136,7 @@ function renderPerfBody(ctx, allData, label, month){
   const libur = luEmail ? allLibur.filter(l=>l.host_email===luEmail && l.tanggal && (!month || l.tanggal.startsWith(month))) : [];
   if(!data.length){
     box.innerHTML = libur.length
-      ? '<p class="empty">Tidak ada data sesi di periode / platform ini.</p>'+[...libur].sort((a,b)=>a.tanggal<b.tanggal?1:-1).map(l=>`<div class="tbl-wrap" style="padding:9px 14px;margin-bottom:6px;color:var(--text3)">🏖️ ${fmtTgl(l.tanggal)} (libur)${l.keterangan?' · '+l.keterangan:''}</div>`).join('')
+      ? '<p class="empty">Tidak ada data sesi di periode / platform ini.</p>'+[...libur].sort((a,b)=>a.tanggal<b.tanggal?1:-1).map(l=>`<div class="tbl-wrap" style="padding:10px 14px;margin-bottom:6px;color:var(--text2);display:flex;align-items:center;gap:10px"><span class="stamp mute">${ic('off','sm')} Libur</span> ${fmtTgl(l.tanggal)}${l.keterangan?' · '+l.keterangan:''}</div>`).join('')
       : '<p class="empty">Tidak ada data di periode / platform ini.</p>';
     return;
   }
@@ -1096,19 +1228,19 @@ function renderPerfBody(ctx, allData, label, month){
     <div class="tbl-wrap"><div class="tbl-scroll"><table>
       <thead><tr><th>Aksi</th><th>Tgl</th><th>Sesi</th><th>Plat</th><th class="num">GMV</th><th class="num">Pembeli</th><th class="num">Items</th><th class="num">Viewers</th><th class="num">Impresi</th><th class="num">Klik</th><th class="num">AvgDur</th><th class="num">Follow</th><th class="num">Likes</th><th class="num">Komen</th><th class="num">CTR</th><th class="num">CTOR</th><th class="num">GPM</th><th class="num">Eng</th><th class="num">SS</th></tr></thead>
       <tbody>${[...data.map(r=>({...r,_libur:false})), ...libur.map(l=>({...l,_libur:true}))].sort((a,b)=>{const ta=a.tanggal||'',tb=b.tanggal||'';if(ta!==tb)return ta<tb?1:-1;return (+(b.sesi||0))-(+(a.sesi||0));}).map(r=>{if(r._libur){return `<tr style="opacity:.7">
-        <td style="white-space:nowrap">${ROLE==='leader'?`<button class="row-btn del" onclick="deleteLibur('${r.id}')" title="Hapus tanda libur">🗑️</button>`:''}</td>
+        <td style="white-space:nowrap">${ROLE==='leader'?`<button class="row-btn del" onclick="deleteLibur('${r.id}')" title="Hapus tanda libur">${ic('trash','sm')}</button>`:''}</td>
         <td style="white-space:nowrap">${fmtTgl(r.tanggal)} <span style="color:var(--text3)">(libur)</span></td>
         <td colspan="17" style="color:var(--text3)">—${r.keterangan?' '+r.keterangan+' ':''}</td>
       </tr>`;}const d=derive(r);const sh=platOf(r)==='shopee';return `<tr>
-        <td style="white-space:nowrap">${ROLE!=='viewer'?`<button class="row-btn" onclick="openEditSesi('${r.id}')" title="Edit sesi">✏️</button>`:''}${ROLE==='leader'?`<button class="row-btn del" onclick="deleteSesi('${r.id}')" title="Hapus sesi">🗑️</button>`:''}</td>
+        <td style="white-space:nowrap">${ROLE!=='viewer'?`<button class="row-btn" onclick="openEditSesi('${r.id}')" title="Edit sesi">${ic('edit','sm')}</button>`:''}${ROLE==='leader'?`<button class="row-btn del" onclick="deleteSesi('${r.id}')" title="Hapus sesi">${ic('trash','sm')}</button>`:''}</td>
         <td>${fmtTgl(r.tanggal)}</td><td>S${r.sesi}</td>
-        <td title="${sh?'Shopee':'TikTok'}">${sh?'🛒':'🎵'}</td>
+        <td title="${sh?'Shopee':'TikTok'}"><span class="gel-dot" style="--gel:var(--${sh?'shopee':'tiktok'})"></span>${sh?'Shopee':'TikTok'}</td>
         <td class="num">${rp(+r.gmv||0)}</td><td class="num">${r.pembeli||0}</td><td class="num">${r.items||0}</td>
         <td class="num">${(r.viewers||0).toLocaleString('id-ID')}</td><td class="num">${sh?'—':(r.impresi||0).toLocaleString('id-ID')}</td><td class="num">${r.klik_produk||0}</td>
         <td class="num">${(+r.avg_view_dur||0).toFixed(0)}</td><td class="num">${r.followers_baru||0}</td><td class="num">${(r.likes||0).toLocaleString('id-ID')}</td><td class="num">${r.komentar||0}</td>
         <td class="num">${sh?(r.viewers&&r.klik_produk?pct(d.klik_per_viewer):'—'):(r.impresi?pct(d.ctr):'—')}</td><td class="num">${r.klik_produk?pct(d.ctor):'—'}</td>
         <td class="num">${sh?'—':(r.impresi?rp(d.gpm):'—')}</td><td class="num">${r.viewers?pct(d.eng):'—'}</td>
-        <td class="num">${r.screenshot_url?`<button class="row-btn" onclick="viewScreenshot('${r.screenshot_url}')" title="Lihat screenshot">📷</button>`:'<span style="color:var(--text3)">—</span>'}</td>
+        <td class="num">${r.screenshot_url?`<button class="row-btn" onclick="viewScreenshot('${r.screenshot_url}')" title="Lihat screenshot">${ic('camera','sm')}</button>`:'<span style="color:var(--text3)">—</span>'}</td>
       </tr>`}).join('')}</tbody>
     </table></div></div>`;
 
@@ -1116,14 +1248,14 @@ function renderPerfBody(ctx, allData, label, month){
   // GMV trend
   charts.gmv = new Chart(document.getElementById('chGmv_'+ctx),{type:'line',data:{
     labels:data.map((r,i)=>fmtTgl(r.tanggal)+' S'+r.sesi),
-    datasets:[{data:data.map(r=>+r.gmv||0),borderColor:'#a78bfa',backgroundColor:'rgba(167,139,250,.15)',tension:.3,pointRadius:2,fill:true}]
-  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'rgba(255,255,255,.07)'}}}}});
+    datasets:[{data:data.map(r=>+r.gmv||0),borderColor:'rgba(233,237,247,.9)',backgroundColor:'rgba(233,237,247,.07)',tension:.3,pointRadius:2,fill:true}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}}}}});
   // Avg per sesi
   const bySesi=[1,2,3,4].map(s=>{const ss=data.filter(r=>+r.sesi===s);return ss.length? ss.reduce((a,r)=>a+(+r.gmv||0),0)/ss.length : 0;});
   charts.sesi = new Chart(document.getElementById('chSesi_'+ctx),{type:'bar',data:{
     labels:['Sesi 1','Sesi 2','Sesi 3','Sesi 4'],
-    datasets:[{data:bySesi,backgroundColor:['#93c5fd','#818cf8','#a78bfa','#f0a868'],borderRadius:5}]
-  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'rgba(255,255,255,.07)'}},x:{grid:{display:false}}}}});
+    datasets:[{data:bySesi,backgroundColor:['rgba(233,237,247,.28)','rgba(233,237,247,.46)','rgba(233,237,247,.66)','rgba(233,237,247,.88)'],borderRadius:5}]
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1000)+'k',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}},x:{grid:{display:false}}}}});
 }
 
 // ════════════════════════════════════
@@ -1198,12 +1330,13 @@ function renderLeaderHome(){
       ${platToggle()}
       <select class="month-sel" onchange="setHomeMonth(this.value)" title="Pilih bulan">${homeMonthOpts(scope, curMonth)}</select>
     </div>
-    <div class="hero" style="background:linear-gradient(135deg,#241f47 0%,#5b2da0 50%,#b4451a 100%);border-radius:16px;padding:26px;color:#fff;margin-bottom:1.3rem;box-shadow:0 8px 30px rgba(30,27,58,.25);position:relative;overflow:hidden">
+    <div class="hero">
+      ${gelField(brandStats.map(s=>({c:brandColor(s.b), v:s.gmv})))}
       <div class="hero-grid">
         <div>
-          <div style="font-size:12px;color:rgba(255,255,255,.72);text-transform:uppercase;letter-spacing:.05em">Total GMV Tim — ${monthName} · ${PLAT_LABEL[PLAT_VIEW]}</div>
-          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:6px 0">
-            <span class="hero-num" id="heroNum" style="font-size:34px;font-weight:600;letter-spacing:-.02em">${rp(tot.gmv)}</span>${chip}
+          <div class="hero-label">Total GMV tim · <b>${monthName}</b> · ${PLAT_LABEL[PLAT_VIEW]}</div>
+          <div class="hero-row">
+            <span class="hero-num" id="heroNum">${rp(tot.gmv)}</span>${chip}
           </div>
           <div class="hero-sub">
             <span>${md.length} sesi live${deltaSpan(md.length, pt.n)}</span><span>${activeHosts} host aktif</span><span>${tot.pembeli} pembeli${deltaSpan(tot.pembeli, pt.pembeli)}</span><span>${tot.viewers.toLocaleString('id-ID')} viewers${deltaSpan(tot.viewers, pt.viewers)}</span>
@@ -1212,46 +1345,40 @@ function renderLeaderHome(){
         <div class="hero-spark"><div class="hero-spark-l">GMV harian tim</div><canvas id="heroSpark"></canvas></div>
       </div>
       ${note?`<div class="hero-note">${note}</div>`:''}
-      ${md.length===0?`<div style="margin-top:12px;font-size:12px;color:#fbbf24;position:relative;z-index:1">${isRunning?'Belum ada data bulan ini.':'Tidak ada data di bulan ini.'}</div>`:''}
+      ${md.length===0?`<div class="hero-empty">${isRunning?'Belum ada data bulan ini.':'Tidak ada data di bulan ini.'}</div>`:''}
     </div>
 
     <div class="grp-head">GMV per Brand — ${monthName}</div>
     <div class="stats" style="margin-bottom:1.3rem">
-      ${brandStats.map(s=>`<div class="stat"><div class="stat-l">${s.b}</div><div class="stat-v">${rp(s.gmv)}${deltaSpan(s.gmv, s.pg)}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${s.sesi} sesi</div></div>`).join('')}
-      <div class="stat"><div class="stat-l">Semua Brand</div><div class="stat-v good">${rp(tot.gmv)}${deltaSpan(tot.gmv, pt.gmv)}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${md.length} sesi</div></div>
+      ${brandStats.map(s=>`<div class="stat" style="--gel:${brandColor(s.b)}"><div class="stat-l"><i class="gel-dot"></i>${s.b}</div><div class="stat-v">${rp(s.gmv)}${deltaSpan(s.gmv, s.pg)}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${s.sesi} sesi</div></div>`).join('')}
+      <div class="stat"><div class="stat-l">Semua Brand</div><div class="stat-v">${rp(tot.gmv)}${deltaSpan(tot.gmv, pt.gmv)}</div><div style="font-size:11px;color:var(--text3);margin-top:2px">${md.length} sesi</div></div>
     </div>
 
     <div class="grp-head">Menu</div>
     <div class="menu-grid">
-      ${ROLE==='leader' ? `<a class="menu-card" href="https://tinyurl.com/leader-senja" style="text-decoration:none;color:inherit">
-        <div class="menu-ic" style="background:rgba(251,191,36,.15);color:#fbbf24">✏️</div>
-        <div class="menu-t">Input Evaluasi</div>
-        <div class="menu-s">Nilai host (17 poin / 6 kategori)</div>
+      ${ROLE==='leader' ? `<a class="menu-card" href="https://tinyurl.com/leader-senja">
+        <div class="menu-ic">${ic('edit')}</div>
+        <div><div class="menu-t">Input Evaluasi</div><div class="menu-s">Nilai host (17 poin / 6 kategori)</div></div>
       </a>
-      <a class="menu-card" href="https://tinyurl.com/dashboard-senja" style="text-decoration:none;color:inherit">
-        <div class="menu-ic" style="background:rgba(167,139,250,.16);color:#c4b5fd">📋</div>
-        <div class="menu-t">Dashboard Evaluasi</div>
-        <div class="menu-s">Pantau skor & progress semua host</div>
+      <a class="menu-card" href="https://tinyurl.com/dashboard-senja">
+        <div class="menu-ic">${ic('eval')}</div>
+        <div><div class="menu-t">Dashboard Evaluasi</div><div class="menu-s">Pantau skor & progress semua host</div></div>
       </a>` : ''}
       <div class="menu-card" onclick="goLeaderTab('l-dash',1)">
-        <div class="menu-ic" style="background:rgba(74,222,128,.15);color:#4ade80">📊</div>
-        <div class="menu-t">Dashboard Performa</div>
-        <div class="menu-s">GMV, CTR, konversi per host</div>
+        <div class="menu-ic">${ic('chart')}</div>
+        <div><div class="menu-t">Dashboard Performa</div><div class="menu-s">GMV, CTR, konversi per host</div></div>
       </div>
       <div class="menu-card" onclick="goLeaderTab('l-compare',2)">
-        <div class="menu-ic" style="background:rgba(96,165,250,.15);color:#60a5fa">⚖️</div>
-        <div class="menu-t">Bandingkan Host</div>
-        <div class="menu-s">Adu metrik antar host per brand</div>
+        <div class="menu-ic">${ic('scale')}</div>
+        <div><div class="menu-t">Bandingkan Host</div><div class="menu-s">Adu metrik antar host per brand</div></div>
       </div>
       <div class="menu-card" onclick="goLeaderTab('l-trend',3)">
-        <div class="menu-ic" style="background:rgba(52,211,153,.15);color:#34d399">📈</div>
-        <div class="menu-t">Tren Brand</div>
-        <div class="menu-s">Naik/turun per brand tiap bulan</div>
+        <div class="menu-ic">${ic('trend')}</div>
+        <div><div class="menu-t">Tren Brand</div><div class="menu-s">Naik/turun per brand tiap bulan</div></div>
       </div>
       ${ROLE==='leader' ? `<div class="menu-card" onclick="goLeaderTab('l-import',4)">
-        <div class="menu-ic" style="background:rgba(167,139,250,.13);color:#a78bfa">📥</div>
-        <div class="menu-t">Import Data</div>
-        <div class="menu-s">Upload export TikTok per brand</div>
+        <div class="menu-ic">${ic('import')}</div>
+        <div><div class="menu-t">Import Data</div><div class="menu-s">Upload export TikTok per brand</div></div>
       </div>` : ''}
     </div>`;
   drawHomeSpark(md);
@@ -1362,7 +1489,7 @@ function renderDash(){
       const prevG = prevS? prevS.gmv : 0;
       if(prevG>0){
         const d=Math.round((g/prevG-1)*100);
-        const col=d>0?'var(--good)':(d<0?'#f87171':'var(--text3)');
+        const col=d>0?'var(--good)':(d<0?'var(--bad)':'var(--text3)');
         const arr=d>0?'▲':(d<0?'▼':'');
         momBadge=`<span title="vs ${mlabelShort(prevMonth)} (${momFull?'bulan penuh':`1–${momCutoff}`}): ${rp(prevG)}" style="font-size:12px;font-weight:700;color:${col}">${(d>=0?'+':'')+d}% ${arr}</span>`;
       } else {
@@ -1402,7 +1529,7 @@ function renderDash(){
   charts.cmp=new Chart(document.getElementById('chCompare'),{type:'bar',data:{
     labels:cmpHosts.map(x=>x.h.name),
     datasets:[{data:cmpHosts.map(x=>x.g),backgroundColor:cmpHosts.map(x=>x.h.color),borderRadius:5}]
-  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1e6).toFixed(1)+'jt',font:{size:10}},grid:{color:'rgba(255,255,255,.07)'}},x:{grid:{display:false}}}}});
+  },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{ticks:{callback:v=>'Rp'+(v/1e6).toFixed(1)+'jt',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}},x:{grid:{display:false}}}}});
 }
 
 // ════════════════════════════════════
@@ -1467,7 +1594,7 @@ function renderCompare(){
     const best=bestOf(key);
     if(v===best) return `<td class="num" style="font-weight:700;color:var(--good)">${fmt(v)} <span style="font-size:10px">▲ tertinggi</span></td>`;
     const delta=Math.round((v/best-1)*100);
-    return `<td class="num">${fmt(v)} <span style="font-size:11px;color:#f59e0b">${delta}%</span></td>`;
+    return `<td class="num">${fmt(v)} <span style="font-size:11px;color:var(--warn)">${delta}%</span></td>`;
   }
   function vCell(x,key,fmt){
     if(x.none) return `<td class="num" style="color:var(--text3)">—</td>`;
@@ -1514,7 +1641,7 @@ function renderCompare(){
     charts.ctor=new Chart(document.getElementById('chCtor'),{type:'bar',data:{
       labels:cd.map(x=>x.h.name),
       datasets:[{data:cd.map(x=>(+x.ctor||0)*100),backgroundColor:cd.map(x=>x.h.color),borderRadius:5}]
-    },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)+'%'}}},scales:{y:{ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(255,255,255,.07)'}},x:{grid:{display:false}}}}});
+    },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toFixed(2)+'%'}}},scales:{y:{ticks:{callback:v=>v+'%',font:{size:10}},grid:{color:'rgba(255,255,255,.05)'}},x:{grid:{display:false}}}}});
   }
 }
 
@@ -1618,7 +1745,7 @@ function renderTrend(){
     <div class="chart-card"><h3>${M.label} bulan ke bulan</h3><div class="chart-wrap"><canvas id="chTrend"></canvas></div></div>`;
 
   if(berjalanLbl){
-    html+=`<div style="font-size:11px;color:#f59e0b;margin-top:8px">⏳ ${berjalanLbl} masih berjalan — titik terakhir (garis putus-putus) belum lengkap, jadi tidak dipakai di perhitungan perubahan %.</div>`;
+    html+=`<div style="font-size:11px;color:var(--warn);margin-top:8px">${berjalanLbl} masih berjalan — titik terakhir (garis putus-putus) belum lengkap, jadi tidak dipakai di perhitungan perubahan %.</div>`;
   }
 
   box.innerHTML=html;
@@ -1636,10 +1763,10 @@ function renderTrend(){
       segment:{ borderDash: ctx => (berjalanIdx>=0 && ctx.p1DataIndex===berjalanIdx) ? [6,4] : undefined },
     }))},
     options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{labels:{color:'#cbd5e1',font:{size:11},usePointStyle:true}},
+      plugins:{legend:{labels:{color:'#b1b8c8',font:{size:11},usePointStyle:true}},
         tooltip:{callbacks:{label:c=>`${c.dataset.label}: ${c.parsed.y==null?'—':fmt(c.parsed.y)}`}}},
-      scales:{y:{ticks:{color:'#94a3b8',font:{size:10},callback:v=>M.type==='money'?('Rp'+(v/1e6).toFixed(1)+'jt'):((v*100).toFixed(1)+'%')},grid:{color:'rgba(255,255,255,.07)'}},
-        x:{ticks:{color:'#94a3b8',font:{size:10}},grid:{display:false}}}}
+      scales:{y:{ticks:{color:'#808899',font:{size:10},callback:v=>M.type==='money'?('Rp'+(v/1e6).toFixed(1)+'jt'):((v*100).toFixed(1)+'%')},grid:{color:'rgba(255,255,255,.05)'}},
+        x:{ticks:{color:'#808899',font:{size:10}},grid:{display:false}}}}
   });
 }
 
@@ -1828,7 +1955,7 @@ function renderTeam(){
     <div class="form-card">
       ${brandRows}
       <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
-        <input id="t_newbrand" placeholder="Nama brand baru" style="flex:1;max-width:260px;padding:9px 12px;border:1px solid var(--border2);border-radius:var(--rs);font-size:13px;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);background:var(--surface);outline:none">
+        <input id="t_newbrand" placeholder="Nama brand baru" style="flex:1;max-width:260px;padding:9px 12px;border:0;border-radius:var(--rs);font-size:13px;color:var(--text);background:rgba(4,6,10,.45);box-shadow:inset 0 0 0 1px var(--border2);outline:none">
         <button class="btn-accent" onclick="teamAddBrand()">+ Tambah Brand</button>
       </div>
       <div class="hint" style="margin-top:8px">Ganti nama brand bisa sekalian mengubah data lama. Hapus brand hanya bisa kalau tidak ada host aktif yang memegangnya; data historis tetap tersimpan.</div>
@@ -1939,7 +2066,7 @@ function importHTML(){
       <div class="fg"><label>Host Sesi 3 &amp; 4 (sore–malam)</label><select id="impSore"></select></div>
     </div>
     <div class="drop" id="drop">
-      <div class="drop-icon">📄</div>
+      <div class="drop-icon">${ic('file','lg')}</div>
       <div class="drop-t">Klik atau drag file ke sini</div>
       <div class="drop-s">.xlsx (TikTok LIVE) atau .csv (Shopee Confirmed Order)</div>
       <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" style="display:none" />
@@ -2114,7 +2241,7 @@ function processImport(rows){
   const summary=Object.entries(byHost).map(([h,c])=>`${h}: ${c} sesi`).join(' · ');
   document.getElementById('impPreview').innerHTML=`
     <div style="margin-top:16px;padding:14px;background:var(--goodbg);border:1px solid var(--goodbd);border-radius:var(--r)">
-      <div style="font-weight:600;color:var(--good);margin-bottom:4px">✓ ${pendingRows.length} sesi siap diimport (${dropped} dilewati)</div>
+      <div style="font-weight:600;color:var(--good);margin-bottom:4px">${pendingRows.length} sesi siap diimport (${dropped} dilewati)</div>
       <div style="font-size:12px;color:var(--text2)">${summary}</div>
     </div>
     <div class="tbl-wrap" style="margin-top:12px"><div class="tbl-scroll"><table>
@@ -2176,7 +2303,7 @@ function processImportShopee(rows){
   const summary=Object.entries(byHost).map(([h,c])=>`${h}: ${c} sesi`).join(' · ');
   document.getElementById('impPreview').innerHTML=`
     <div style="margin-top:16px;padding:14px;background:var(--goodbg);border:1px solid var(--goodbd);border-radius:var(--r)">
-      <div style="font-weight:600;color:var(--good);margin-bottom:4px">✓ ${pendingRows.length} sesi Shopee siap diimport (${dropped} dilewati) <span class="badge" style="background:#ee4d2d22;color:#ff7a59;border-color:#ee4d2d55">Shopee</span></div>
+      <div style="font-weight:600;color:var(--good);margin-bottom:4px">${pendingRows.length} sesi Shopee siap diimport (${dropped} dilewati) <span class="badge"><span class="gel-dot" style="--gel:var(--shopee);margin-right:0"></span>Shopee</span></div>
       <div style="font-size:12px;color:var(--text2)">${summary||'—'}</div>
       <div style="font-size:11px;color:var(--text3);margin-top:4px">Impresi/Klik/Likes/Followers tidak ada di export Shopee → diisi 0. GMV pakai Confirmed Order.</div>
     </div>
@@ -2217,7 +2344,7 @@ function renderLibur(){
 
   const form = isLeader ? `
     <div class="tbl-wrap" style="padding:14px 16px;margin-bottom:14px">
-      <div class="section-title" style="margin-top:0">🏖️ Tandai host libur</div>
+      <div class="section-title" style="margin-top:0">Tandai host libur</div>
       <div class="filter-row" style="flex-wrap:wrap;gap:8px">
         <select id="lb_host">${hosts.map(h=>`<option value="${h.email}">${h.name}</option>`).join('')}</select>
         <input type="date" id="lb_tgl" value="${besok}" />
@@ -2250,19 +2377,19 @@ function renderLibur(){
     const g={tiktok:gapOf('tiktok'), shopee:gapOf('shopee')};
     const totMiss=g.tiktok.miss.length+g.shopee.miss.length;
     const row=plat=>{
-      const x=g[plat], ic=plat==='tiktok'?'🎵':'🛒';
-      return `<div style="display:flex;gap:9px;align-items:flex-start;padding:3px 0">
-        <div style="min-width:78px;font-size:12.5px;font-weight:600;color:var(--text2)">${ic} ${PLAT_LABEL[plat]}</div>
-        <div style="font-size:12.5px;flex:1">${x.miss.length
-          ? `<span style="color:#f0a868;font-weight:700">⚠️ ${x.miss.length} belum diisi:</span> <span style="color:var(--text2)">${x.miss.join(', ')}</span>`
-          : `<span style="color:#4ade80;font-weight:700">✅ Lengkap</span>`}</div>
+      const x=g[plat];
+      return `<div class="plat-row" style="--pg:var(--${plat})">
+        <div class="plat-name">${PLAT_LABEL[plat]}</div>
+        <div style="flex:1">${x.miss.length
+          ? `<span style="color:var(--warn);font-weight:600">${x.miss.length} belum diisi:</span> <span style="color:var(--text2)">${x.miss.join(', ')}</span>`
+          : `<span style="color:var(--good);font-weight:600">Lengkap</span>`}</div>
       </div>`;
     };
     const off=g.tiktok.off;
-    return `<div class="tbl-wrap" style="padding:11px 14px;margin-bottom:8px;border-left:3px solid ${totMiss?'#f0a868':'#4ade80'}">
-      <div style="font-weight:700;margin-bottom:3px">${h.name}</div>
+    return `<div class="tbl-wrap complete-card" style="margin-bottom:10px">
+      <div class="complete-head"><span style="display:flex;align-items:center;gap:10px"><span class="h-ava" style="background:${h.color};width:28px;height:28px;font-size:12px;border-radius:8px">${h.name[0]}</span>${h.name}</span>${totMiss?`<span class="stamp warn">${ic('alert','sm')} ${totMiss} belum diisi</span>`:`<span class="stamp good">${ic('check','sm')} Lengkap</span>`}</div>
       ${row('tiktok')}${row('shopee')}
-      ${off.length?`<div style="font-size:11.5px;color:var(--text3);margin-top:4px">🏖️ Libur: ${off.join(', ')}</div>`:''}
+      ${off.length?`<div class="complete-foot">${ic('off','sm')} Libur: ${off.join(', ')}</div>`:''}
     </div>`;
   }).join('');
 
@@ -2279,7 +2406,7 @@ function renderLibur(){
           <div style="font-weight:700">${hostNameByEmail(email)} <span style="font-weight:400;font-size:12px;color:var(--text3)">· ${items.length} hari libur</span></div>
         </div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
-          ${items.map(l=>`<span style="display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border:1px solid var(--text3);border-radius:20px;font-size:12px;color:var(--text2)" title="${l.keterangan||''}">🏖️ ${fmtTglHari(l.tanggal)}${l.keterangan?` · ${l.keterangan}`:''}${isLeader?`<button class="row-btn del" onclick="deleteLibur('${l.id}')" title="Hapus tanda libur" style="padding:0 2px">✕</button>`:''}</span>`).join('')}
+          ${items.map(l=>`<span class="stamp mute" style="font-weight:500" title="${l.keterangan||''}">${ic('off','sm')} ${fmtTglHari(l.tanggal)}${l.keterangan?` · ${l.keterangan}`:''}${isLeader?`<button class="row-btn del" onclick="deleteLibur('${l.id}')" title="Hapus tanda libur" style="width:20px;height:20px;margin:0 -4px 0 2px;box-shadow:none">${ic('x','sm')}</button>`:''}</span>`).join('')}
         </div>
       </div>`;
     }).join('') : '<p class="empty" style="padding:8px 0">Tidak ada libur di bulan ini.</p>';
@@ -2287,9 +2414,9 @@ function renderLibur(){
   box.innerHTML = `${form}
     <div class="filter-row" style="margin-bottom:12px"><label style="font-size:13px;color:var(--text2)">Bulan:</label>
       <select onchange="LIBUR_MONTH=this.value;renderLibur()">${monthOpts}</select></div>
-    <div class="section-title">📋 Kelengkapan data ${isCur?'(sampai hari ini)':''}</div>
+    <div class="section-title">Kelengkapan data ${isCur?'(sampai hari ini)':''}</div>
     ${cards || '<p class="empty">Belum ada host aktif.</p>'}
-    <div class="section-title" style="margin-top:18px">🏖️ Daftar libur</div>
+    <div class="section-title" style="margin-top:22px">Daftar libur</div>
     ${listHTML}`;
 }
 async function addLibur(){
