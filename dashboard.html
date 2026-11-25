@@ -303,6 +303,8 @@
     .brand-tabs{ display:inline-flex; vertical-align:middle; }
     .modal{ max-width:680px; }
   }
+
+  @media (min-width:1100px){ .app-wrap{ max-width:none; padding:1.75rem clamp(24px,2.6vw,56px) 4rem; } }
 </style>
 </head>
 <body>
@@ -374,7 +376,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ── Config tim dinamis dari tabel app_config (dikelola lewat tab "Tim" di Beranda) ──
 let HOST_LIST=[], BRANDS=[];
-const BRAND_GEL=['#a28bff','#5b8cff','#ff5fb4','#c9f25c','#5fe0e6','#ff9a5c','#f0a6ff','#9fd0ff'];   // gel brand, sama dengan performa.html
+const BRAND_GEL=['#a28bff','#5b8cff','#ff5fb4','#c9f25c','#f0a6ff','#ffb38a','#9fd0ff','#d8c8ff'];   // gel brand, sama dengan performa.html
 const gelOf = b => BRAND_GEL[Math.max(0,BRANDS.indexOf(b)) % BRAND_GEL.length];
 const HOST_PALETTE=['#e879f9','#a855f7','#3b82f6','#06b6d4','#f97316','#ef4444','#22c55e','#eab308','#f472b6','#38bdf8'];
 async function loadConfig(){

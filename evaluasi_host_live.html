@@ -323,6 +323,25 @@
     .star{ color:#999; } .star.on{ background:#111; color:#fff; box-shadow:none; } .stars{ background:#fff; box-shadow:0 0 0 1px #ddd; }
     .field input, .field select, textarea{ background:#fff!important; color:#111!important; box-shadow:0 0 0 1px #ccc!important; }
   }
+
+  /* ════════ Tata letak: HP = urutan biasa; desktop = penilaian kiri, ringkasan tetap kanan ════════ */
+  .eval-layout{ display:flex; flex-direction:column; }
+  .eval-side{ display:contents; }
+  .eval-side > .meta-grid{ order:-2; }
+  .eval-main{ order:-1; }
+  @media (min-width:1100px){
+    .page{ max-width:none; padding:1.75rem clamp(24px,2.6vw,56px) 4rem; }
+    .eval-layout{ display:grid; grid-template-columns:minmax(0,1fr) minmax(360px,420px); gap:24px; align-items:start; }
+    .eval-main{ grid-column:1; grid-row:1; order:0; }
+    .eval-side{ display:block; grid-column:2; grid-row:1; position:sticky; top:16px; max-height:calc(100vh - 32px); overflow:auto; padding-right:2px; }
+    .eval-side > .meta-grid{ grid-template-columns:1fr 1fr; margin-bottom:12px; }
+    .eval-side .summary-bar{ grid-template-columns:1fr 1fr; margin:0 0 12px; }
+    .eval-side .btn-row{ margin-top:4px; }
+    .eval-side .btn-row .btn-primary{ flex:1 1 100%; justify-content:center; }
+  }
+
+  .btn.btn-primary{ background:var(--key); color:var(--key-ink); box-shadow:0 1px 0 rgba(255,255,255,.6) inset, 0 10px 24px -12px rgba(233,237,247,.55); font-weight:600; }
+  .btn.btn-primary:hover{ background:#fff; }
 </style>
 </head>
 <body>
@@ -354,6 +373,8 @@
     </div>
   </div>
 
+  <div class="eval-layout">
+  <aside class="eval-side">
   <!-- Meta -->
   <div class="meta-grid">
     <div class="field">
@@ -378,8 +399,6 @@
     </div>
   </div>
 
-  <!-- Sections -->
-  <div id="sections-container"></div>
 
   <!-- Summary -->
   <div class="summary-bar">
@@ -424,6 +443,11 @@
     <button class="btn btn-draft" onclick="saveDraft()">Jadikan draft</button>
     <button class="btn" onclick="printPage()">Cetak / export PDF</button>
     <button class="btn btn-danger" onclick="resetForm()">Reset form</button>
+  </div>
+  </aside>
+
+  <!-- Sections -->
+  <div class="eval-main" id="sections-container"></div>
   </div>
 
   <!-- Drafts (lokal, belum dikirim) -->
