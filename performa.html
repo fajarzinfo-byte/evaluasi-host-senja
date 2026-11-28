@@ -397,6 +397,9 @@
   @media (min-width:1500px){ .stats{ grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); } }
 
   @media (min-width:1100px){ .menu-grid:has(> :nth-child(4):last-child){ grid-template-columns:repeat(4,minmax(0,1fr)); } }
+
+  .libur-row{ display:flex; align-items:center; gap:12px; padding:10px 14px; border-bottom:1px solid var(--border); }
+  .libur-row:last-child{ border-bottom:0; }
 </style>
 </head>
 <body>
@@ -753,11 +756,13 @@ function buildHost(){
   document.getElementById('tabs').innerHTML =
     `<div class="tab active" onclick="switchTab(this,'p-home')">Beranda</div>`+
     `<div class="tab" onclick="switchTab(this,'p-input')">Input Performa</div>`+
-    `<div class="tab" onclick="switchTab(this,'p-mine')">Performa Saya</div>`;
+    `<div class="tab" onclick="switchTab(this,'p-mine')">Performa Saya</div>`+
+    `<div class="tab" onclick="switchTab(this,'p-libur')">Libur Saya</div>`;
   document.getElementById('panels').innerHTML =
     `<div class="panel active" id="p-home"><div id="homeContent">${SKEL}</div></div>`+
     `<div class="panel" id="p-input">${hostFormHTML()}</div>`+
-    `<div class="panel" id="p-mine"><div id="mineContent">${SKEL}</div></div>`;
+    `<div class="panel" id="p-mine"><div id="mineContent">${SKEL}</div></div>`+
+    `<div class="panel" id="p-libur"><div id="myLiburContent">${SKEL}</div></div>`;
   (function(){ const ft=document.getElementById('f_tanggal'); if(ft){ const d=new Date(); const iso=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; ft.value=iso; ft.max=iso; } })();
   attachCalcListeners();
   setupThousandInputs(INT_FIELDS_F);
@@ -795,6 +800,7 @@ async function loadHostData(){
   myData = (error||!data)? [] : data;
   renderHome();
   renderMine();
+  renderMyLibur();
 }
 
 function renderHome(){
@@ -848,7 +854,7 @@ function renderHome(){
       <div class="complete-head"><span>Kelengkapan data ${monthName}${isRunning?' (s/d hari ini)':''}</span>${totalMiss?`<span class="stamp warn">${ic('alert','sm')} ${totalMiss} belum diisi</span>`:`<span class="stamp good">${ic('check','sm')} Lengkap</span>`}</div>
       ${platRow('tiktok')}${platRow('shopee')}
       ${offAll.length?`<div class="complete-foot">${ic('off','sm')} Libur: ${offAll.join(', ')}</div>`:''}
-      ${totalMiss?`<div class="complete-foot">Kalau tanggal itu kamu libur, kabari leader biar ditandai libur ya.</div>`:''}
+      ${totalMiss?`<div class="complete-foot">Tanggal itu kamu libur, sakit, cuti, atau tidak ada live? <a href="#" onclick="goTab('p-libur',3);return false" style="color:var(--text);font-weight:600">Tandai di Libur Saya</a></div>`:''}
     </div>`;
 
   box.innerHTML = `
@@ -2378,7 +2384,7 @@ function renderLibur(){
       <div class="filter-row" style="flex-wrap:wrap;gap:8px">
         <select id="lb_host">${hosts.map(h=>`<option value="${h.email}">${h.name}</option>`).join('')}</select>
         <input type="date" id="lb_tgl" value="${besok}" />
-        <input type="text" id="lb_ket" placeholder="Keterangan (opsional)" style="min-width:160px" />
+        <select id="lb_ket">${LIBUR_KET.map(k=>`<option value="${k}">${k}</option>`).join('')}</select>
         <button class="btn-accent" onclick="addLibur()">Tandai libur</button>
       </div>
       <div style="font-size:11px;color:var(--text3);margin-top:8px">Tanggal libur muncul di riwayat sesi host & dihitung "beres" di kelengkapan data.</div>
@@ -2458,7 +2464,6 @@ async function addLibur(){
   const {error}=await sb.from('host_libur').insert([{host_email:email,tanggal:tgl,keterangan:ket||null}]);
   if(error){ showToast(error.code==='23505'?'Tanggal itu sudah ditandai libur untuk host ini.':'Gagal: '+error.message,'error'); return; }
   showToast(`${hostNameByEmail(email)} ditandai libur ${fmtTgl(tgl)}.`,'success');
-  document.getElementById('lb_ket').value='';
   await fetchLibur(); refreshLiburViews();
 }
 async function deleteLibur(id){
@@ -2467,6 +2472,63 @@ async function deleteLibur(id){
   if(error){ showToast('Gagal: '+error.message,'error'); return; }
   showToast('Tanda libur dihapus.','success');
   await fetchLibur(); refreshLiburViews();
+}
+// ── Host menandai libur sendiri (tab "Libur Saya") ──
+const LIBUR_KET=['Libur','Sakit','Cuti','Tidak ada live'];
+function renderMyLibur(){
+  const box=document.getElementById('myLiburContent'); if(!box) return;
+  const d=new Date(), today=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const mine=allLibur.filter(l=>l.host_email===ME).sort((a,b)=>(b.tanggal||'').localeCompare(a.tanggal||''));
+  const byMonth={};
+  mine.forEach(l=>{ const m=(l.tanggal||'').slice(0,7); (byMonth[m]=byMonth[m]||[]).push(l); });
+  const list = mine.length ? Object.keys(byMonth).map(m=>`
+      <div class="grp-head" style="margin-top:6px">${monthLabel(m)} · ${byMonth[m].length} hari</div>
+      <div class="tbl-wrap" style="margin-bottom:14px">
+        ${byMonth[m].map(l=>`<div class="libur-row">
+          <span style="min-width:110px;font-weight:600">${fmtTglHari(l.tanggal)}</span>
+          <span class="stamp mute">${ic('off','sm')} ${l.keterangan||'Libur'}</span>
+          <span style="flex:1"></span>
+          <button class="row-btn del" onclick="deleteMyLibur('${l.id}')" title="Hapus tanda ini">${ic('trash','sm')}</button>
+        </div>`).join('')}
+      </div>`).join('')
+    : '<p class="empty" style="padding:1.5rem 0">Belum ada tanggal yang kamu tandai.</p>';
+  box.innerHTML=`
+    <div class="form-card">
+      <div class="section-title" style="margin-top:0">Tandai hari tanpa live</div>
+      <div class="form-grid">
+        <div class="fg"><label>Tanggal</label><input type="date" id="ml_tgl" value="${today}" /></div>
+        <div class="fg"><label>Keterangan</label><select id="ml_ket">${LIBUR_KET.map(k=>`<option value="${k}">${k}</option>`).join('')}</select></div>
+        <div class="fg" style="justify-content:flex-end"><button class="btn-accent" id="ml_btn" onclick="addMyLibur()">Tandai</button></div>
+      </div>
+      <div class="hint" style="margin-top:10px">Tanggal yang ditandai tidak dihitung "belum diisi" di kelengkapan data, dan muncul di riwayat sesi. Leader bisa melihatnya.</div>
+    </div>
+    ${list}`;
+}
+async function addMyLibur(){
+  const tgl=document.getElementById('ml_tgl').value;
+  const ket=document.getElementById('ml_ket').value;
+  if(!tgl){ showToast('Pilih tanggal dulu.','error'); return; }
+  if(myData.some(r=>r.tanggal===tgl)){ showToast('Kamu sudah punya data sesi di tanggal itu, jadi tidak bisa ditandai libur.','error'); return; }
+  if(allLibur.some(l=>l.host_email===ME && l.tanggal===tgl)){ showToast('Tanggal itu sudah kamu tandai.','error'); return; }
+  const btn=document.getElementById('ml_btn'); btn.disabled=true;
+  const {error}=await sb.from('host_libur').insert([{host_email:ME,tanggal:tgl,keterangan:ket}]);
+  btn.disabled=false;
+  if(error){
+    const msg = error.code==='23505' ? 'Tanggal itu sudah ditandai.'
+      : (error.code==='42501' || /row-level security/i.test(error.message||'')) ? 'Belum ada izin untuk menandai libur sendiri. Minta leader mengaktifkannya.'
+      : 'Gagal: '+error.message;
+    showToast(msg,'error'); return;
+  }
+  showToast(`${fmtTgl(tgl)} ditandai: ${ket}.`,'success');
+  await fetchLibur(); renderMyLibur(); renderHome(); renderMine();
+}
+async function deleteMyLibur(id){
+  if(!confirm('Hapus tanda ini? Tanggalnya akan dihitung belum diisi lagi kalau tidak ada data sesi.')) return;
+  const {data,error}=await sb.from('host_libur').delete().eq('id',id).select();
+  if(error){ showToast('Gagal: '+error.message,'error'); return; }
+  if(!data||!data.length){ showToast('Belum ada izin untuk menghapus tanda sendiri. Minta leader mengaktifkannya.','error'); return; }
+  showToast('Tanda dihapus.','success');
+  await fetchLibur(); renderMyLibur(); renderHome(); renderMine();
 }
 function refreshLiburViews(){
   renderLibur();
